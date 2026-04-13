@@ -21,6 +21,19 @@ url: /hacsfiles/ha-button-design/ha-button-switch-card.js
 type: module
 ```
 
+### Troubleshooting HACS installation
+
+If HACS shows **Unknown error** while downloading:
+
+1. Remove the repository from HACS.
+2. Delete `/config/www/community/ha-button-design` if it was created partially.
+3. Restart Home Assistant.
+4. Add this repository again as a **Custom repository** with category **Dashboard**.
+5. Install again.
+
+This repository uses a minimal HACS manifest (`type`, `content_in_root`, `filename`) to avoid metadata parsing issues on stricter HACS versions.
+Note: In the HACS UI the category is called **Dashboard**, but in `hacs.json` the correct backend value is still `"type": "plugin"`.
+
 ### Manual
 
 1. Copy `ha-button-switch-card.js` into your Home Assistant `www` folder (for example `/config/www/ha-button-switch-card.js`).
