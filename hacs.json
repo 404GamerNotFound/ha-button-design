@@ -1,0 +1,7 @@
+{
+  "name": "Heat Button Design",
+  "content_in_root": true,
+  "filename": "ha-heat-switch-card.js",
+  "render_readme": true,
+  "homeassistant": ">=2024.1.0"
+}

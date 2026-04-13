@@ -10,6 +10,19 @@ type: custom:heat-switch-card
 
 ## Installation
 
+### HACS (recommended)
+
+1. Add this repository as a **Custom repository** in HACS with category **Dashboard**.
+2. Install **Heat Button Design**.
+3. Add the resource in **Settings → Dashboards → Resources**:
+
+```yaml
+url: /hacsfiles/ha-button-design/ha-heat-switch-card.js
+type: module
+```
+
+### Manual
+
 1. Copy `ha-heat-switch-card.js` into your Home Assistant `www` folder (for example `/config/www/ha-heat-switch-card.js`).
 2. Add the resource in **Settings → Dashboards → Resources**:
 
