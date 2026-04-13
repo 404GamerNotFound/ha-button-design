@@ -4,11 +4,15 @@
  */
 
 class ButtonSwitchCard extends HTMLElement {
+  static getConfigElement() {
+    return document.createElement("button-switch-card-editor");
+  }
+
   static getStubConfig() {
     return {
       type: "custom:button-switch-card",
-      entity: "switch.example_switch",
-      name: "Example Switch",
+      entity: "switch.tv",
+      name: "TV",
       icon: "mdi:radiator",
     };
   }
@@ -350,6 +354,84 @@ class ButtonSwitchCard extends HTMLElement {
   }
 }
 
+class ButtonSwitchCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = {
+      entity: "",
+      name: "",
+      icon: "mdi:radiator",
+      ...config,
+    };
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._render();
+  }
+
+  _valueChanged(event) {
+    if (!this._config) return;
+    const target = event.target;
+    const field = target?.dataset?.field;
+    if (!field) return;
+
+    const value = target.value.trim();
+    const nextConfig = { ...this._config };
+    if (value) {
+      nextConfig[field] = value;
+    } else {
+      delete nextConfig[field];
+    }
+
+    this._config = nextConfig;
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { config: nextConfig },
+      })
+    );
+  }
+
+  _render() {
+    if (!this._config) return;
+
+    this.innerHTML = `
+      <div class="card-config">
+        <ha-textfield
+          label="Switch entity"
+          helper="Example: switch.tv"
+          data-field="entity"
+          value="${this._config.entity || ""}"
+        ></ha-textfield>
+        <ha-textfield
+          label="Name"
+          data-field="name"
+          value="${this._config.name || ""}"
+        ></ha-textfield>
+        <ha-textfield
+          label="Icon"
+          helper="Example: mdi:radiator"
+          data-field="icon"
+          value="${this._config.icon || ""}"
+        ></ha-textfield>
+      </div>
+      <style>
+        .card-config {
+          display: grid;
+          gap: 12px;
+        }
+      </style>
+    `;
+
+    this.querySelectorAll("ha-textfield").forEach((input) => {
+      input.addEventListener("change", (event) => this._valueChanged(event));
+      input.addEventListener("input", (event) => this._valueChanged(event));
+    });
+  }
+}
+
 if (!customElements.get("button-switch-card")) {
   customElements.define("button-switch-card", ButtonSwitchCard);
 }
@@ -358,17 +440,21 @@ if (!customElements.get("heat-switch-card")) {
   customElements.define("heat-switch-card", ButtonSwitchCard);
 }
 
+if (!customElements.get("button-switch-card-editor")) {
+  customElements.define("button-switch-card-editor", ButtonSwitchCardEditor);
+}
+
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "button-switch-card",
+  type: "custom:button-switch-card",
   name: "Button Switch Card",
-  description: "Switch button card with an orange button-style design language.",
+  description: "Switch on/off card with a vertical button-style design.",
   preview: true,
   documentationURL: "https://github.com/mixelpixx/ha-button-design",
 });
 
 window.customCards.push({
-  type: "heat-switch-card",
+  type: "custom:heat-switch-card",
   name: "Heat Switch Card (alias)",
   description: "Compatibility alias for Button Switch Card.",
   preview: true,

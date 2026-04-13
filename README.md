@@ -15,6 +15,7 @@ type: custom:heat-switch-card
 ```
 
 Both card types are registered for the Dashboard card picker with preview support.
+The visual editor includes a switch entity field (for example `switch.tv`) when adding the card.
 
 ## Installation
 
@@ -59,7 +60,7 @@ type: module
 ```yaml
 type: custom:button-switch-card
 name: Living Room
-entity: switch.living_room_lamp
+entity: switch.tv
 icon: mdi:radiator
 background_start: "#ffa20f"
 background_end: "#ff9800"
