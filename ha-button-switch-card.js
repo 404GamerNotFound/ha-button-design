@@ -1,10 +1,9 @@
 /*
- * Heat Switch Card
- * A Home Assistant custom Lovelace card designed to visually match
- * the 404GamerNotFound heating-control-card style.
+ * Button Switch Card
+ * A Home Assistant custom Lovelace card with an orange button-style layout.
  */
 
-class HeatSwitchCard extends HTMLElement {
+class ButtonSwitchCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -14,15 +13,18 @@ class HeatSwitchCard extends HTMLElement {
 
   setConfig(config) {
     if (!config || !config.entity) {
-      throw new Error("Heat Switch Card: You need to define an entity.");
+      throw new Error("Button Switch Card: You need to define an entity.");
+    }
+    if (!config.entity.startsWith("switch.")) {
+      throw new Error("Button Switch Card: The entity must be from the switch domain (switch.*).");
     }
 
     this._config = {
       name: "",
       icon: "mdi:radiator",
-      on_label: "HEATING ON",
-      off_label: "HEATING OFF",
-      state_text_on: "Heating",
+      on_label: "SWITCH ON",
+      off_label: "SWITCH OFF",
+      state_text_on: "Active",
       state_text_off: "Idle",
       background_start: "#ffa20f",
       background_end: "#ff9800",
@@ -55,14 +57,7 @@ class HeatSwitchCard extends HTMLElement {
     if (!this._hass || !this._config) return;
 
     const entityId = this._config.entity;
-    const [domain] = entityId.split(".");
-
-    if (domain !== "switch" && domain !== "input_boolean") {
-      this._hass.callService("homeassistant", "toggle", { entity_id: entityId });
-      return;
-    }
-
-    this._hass.callService(domain, "toggle", { entity_id: entityId });
+    this._hass.callService("switch", "toggle", { entity_id: entityId });
   }
 
   _fireAction(actionName) {
@@ -125,7 +120,7 @@ class HeatSwitchCard extends HTMLElement {
           </div>
 
           <div class="bottom-row">
-            <div class="chip ${isOn ? "active" : ""}">${isOn ? "HEAT" : "OFF"}</div>
+            <div class="chip ${isOn ? "active" : ""}">${isOn ? "ON" : "OFF"}</div>
             <div class="status-pill">${isOn ? this._config.on_label : this._config.off_label}</div>
             <div class="state-text">${isOn ? this._config.state_text_on : this._config.state_text_off}</div>
           </div>
@@ -346,12 +341,12 @@ class HeatSwitchCard extends HTMLElement {
   }
 }
 
-customElements.define("heat-switch-card", HeatSwitchCard);
+customElements.define("button-switch-card", ButtonSwitchCard);
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "heat-switch-card",
-  name: "Heat Switch Card",
-  description: "Switch button card matching the heating-control-card design language.",
+  type: "button-switch-card",
+  name: "Button Switch Card",
+  description: "Switch button card with an orange button-style design language.",
   preview: true,
 });

@@ -1,11 +1,11 @@
 # ha-button-design
 
-Custom Lovelace switch card for Home Assistant that visually matches the orange style of `ha-heat-design`.
+Custom Lovelace switch card for Home Assistant with an orange button-style design.
 
 ## Card type
 
 ```yaml
-type: custom:heat-switch-card
+type: custom:button-switch-card
 ```
 
 ## Installation
@@ -13,21 +13,21 @@ type: custom:heat-switch-card
 ### HACS (recommended)
 
 1. Add this repository as a **Custom repository** in HACS with category **Dashboard**.
-2. Install **Heat Button Design**.
+2. Install **HA Button Design**.
 3. Add the resource in **Settings → Dashboards → Resources**:
 
 ```yaml
-url: /hacsfiles/ha-button-design/ha-heat-switch-card.js
+url: /hacsfiles/ha-button-design/ha-button-switch-card.js
 type: module
 ```
 
 ### Manual
 
-1. Copy `ha-heat-switch-card.js` into your Home Assistant `www` folder (for example `/config/www/ha-heat-switch-card.js`).
+1. Copy `ha-button-switch-card.js` into your Home Assistant `www` folder (for example `/config/www/ha-button-switch-card.js`).
 2. Add the resource in **Settings → Dashboards → Resources**:
 
 ```yaml
-url: /local/ha-heat-switch-card.js
+url: /local/ha-button-switch-card.js
 type: module
 ```
 
@@ -36,15 +36,15 @@ type: module
 ## Example configuration
 
 ```yaml
-type: custom:heat-switch-card
+type: custom:button-switch-card
 name: Living Room
-entity: switch.living_room_heating
+entity: switch.living_room_lamp
 icon: mdi:radiator
 background_start: "#ffa20f"
 background_end: "#ff9800"
-on_label: "HEATING ON"
-off_label: "HEATING OFF"
-state_text_on: "Heating"
+on_label: "SWITCH ON"
+off_label: "SWITCH OFF"
+state_text_on: "Active"
 state_text_off: "Idle"
 track_color: "rgba(255,255,255,0.25)"
 track_inner_color: "rgba(255,255,255,0.45)"
@@ -59,21 +59,21 @@ double_tap_action:
   action: call-service
   service: switch.turn_off
   service_data:
-    entity_id: switch.living_room_heating
+    entity_id: switch.living_room_lamp
 ```
 
 ## Configuration options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `entity` | string | **required** | Entity to control (`switch.*`, `input_boolean.*`, or any toggle-capable entity). |
+| `entity` | string | **required** | Switch entity to control (`switch.*`). |
 | `name` | string | entity friendly name | Title in the center of the card. |
 | `icon` | string | `mdi:radiator` | Icon inside the switch knob. |
 | `background_start` | color string | `#ffa20f` | Gradient start color. |
 | `background_end` | color string | `#ff9800` | Gradient end color. |
-| `on_label` | string | `HEATING ON` | Middle bottom status text when on. |
-| `off_label` | string | `HEATING OFF` | Middle bottom status text when off. |
-| `state_text_on` | string | `Heating` | Right bottom label when on. |
+| `on_label` | string | `SWITCH ON` | Middle bottom status text when on. |
+| `off_label` | string | `SWITCH OFF` | Middle bottom status text when off. |
+| `state_text_on` | string | `Active` | Right bottom label when on. |
 | `state_text_off` | string | `Idle` | Right bottom label when off. |
 | `track_color` | color string | `rgba(255,255,255,0.25)` | Outer switch track color. |
 | `track_inner_color` | color string | `rgba(255,255,255,0.45)` | Vertical center line color. |
