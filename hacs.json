@@ -1,7 +1,6 @@
 {
   "name": "HA Button Design",
+  "type": "plugin",
   "content_in_root": true,
-  "filename": "ha-button-switch-card.js",
-  "render_readme": true,
-  "homeassistant": ">=2024.1.0"
+  "filename": "ha-button-switch-card.js"
 }
