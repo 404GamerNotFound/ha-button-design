@@ -4,6 +4,15 @@
  */
 
 class ButtonSwitchCard extends HTMLElement {
+  static getStubConfig() {
+    return {
+      type: "custom:button-switch-card",
+      entity: "switch.example_switch",
+      name: "Example Switch",
+      icon: "mdi:radiator",
+    };
+  }
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -341,7 +350,13 @@ class ButtonSwitchCard extends HTMLElement {
   }
 }
 
-customElements.define("button-switch-card", ButtonSwitchCard);
+if (!customElements.get("button-switch-card")) {
+  customElements.define("button-switch-card", ButtonSwitchCard);
+}
+
+if (!customElements.get("heat-switch-card")) {
+  customElements.define("heat-switch-card", ButtonSwitchCard);
+}
 
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -349,4 +364,13 @@ window.customCards.push({
   name: "Button Switch Card",
   description: "Switch button card with an orange button-style design language.",
   preview: true,
+  documentationURL: "https://github.com/mixelpixx/ha-button-design",
+});
+
+window.customCards.push({
+  type: "heat-switch-card",
+  name: "Heat Switch Card (alias)",
+  description: "Compatibility alias for Button Switch Card.",
+  preview: true,
+  documentationURL: "https://github.com/mixelpixx/ha-button-design",
 });
