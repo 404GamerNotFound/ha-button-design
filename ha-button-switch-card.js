@@ -52,6 +52,7 @@ class ButtonSwitchCard extends HTMLElement {
       knob_color: "#d9d9d9",
       chip_active_background: "rgba(216, 133, 0, 0.8)",
       chip_inactive_background: "rgba(255,255,255,0.14)",
+      slider_orientation: "vertical",
       ...config,
     };
 
@@ -135,6 +136,8 @@ class ButtonSwitchCard extends HTMLElement {
     const title = this._config.title || friendlyName;
     const powerText = this._getPowerText();
     const compactClass = this._config.compact ? "compact" : "";
+    const sliderOrientation =
+      this._config.slider_orientation === "horizontal" ? "horizontal" : "vertical";
 
     this.shadowRoot.innerHTML = `
       <ha-card>
@@ -144,7 +147,7 @@ class ButtonSwitchCard extends HTMLElement {
               ? `
           <div class="compact-title">${title}</div>
           <div class="compact-switch-wrap">
-            <div class="compact-track">
+            <div class="compact-track ${sliderOrientation}">
               <div class="compact-track-line"></div>
               <div class="compact-knob ${isOn ? "on" : "off"}">
                 ${this._config.icon ? `<ha-icon icon="${this._config.icon}"></ha-icon>` : ""}
@@ -171,7 +174,7 @@ class ButtonSwitchCard extends HTMLElement {
           <div class="main-name">${friendlyName}</div>
 
           <div class="switch-wrap">
-            <div class="track">
+            <div class="track ${sliderOrientation}">
               <div class="track-line"></div>
               <div class="knob ${isOn ? "on" : "off"}">
                 ${this._config.icon ? `<ha-icon icon="${this._config.icon}"></ha-icon>` : ""}
@@ -268,6 +271,21 @@ class ButtonSwitchCard extends HTMLElement {
           background: ${this._config.track_inner_color};
         }
 
+        .compact-track.horizontal {
+          width: 140px;
+          height: 74px;
+        }
+
+        .compact-track.horizontal .compact-track-line {
+          left: 18px;
+          right: 18px;
+          top: 50%;
+          bottom: auto;
+          width: auto;
+          height: 10px;
+          transform: translateY(-50%);
+        }
+
         .compact-knob {
           position: absolute;
           left: 50%;
@@ -290,6 +308,20 @@ class ButtonSwitchCard extends HTMLElement {
 
         .compact-knob.off {
           bottom: 16px;
+        }
+
+        .compact-track.horizontal .compact-knob {
+          top: 50%;
+          transform: translateY(-50%);
+        }
+
+        .compact-track.horizontal .compact-knob.on {
+          left: 16px;
+        }
+
+        .compact-track.horizontal .compact-knob.off {
+          left: auto;
+          right: 16px;
         }
 
         .compact-knob ha-icon {
@@ -392,6 +424,21 @@ class ButtonSwitchCard extends HTMLElement {
           background: ${this._config.track_inner_color};
         }
 
+        .track.horizontal {
+          width: 340px;
+          height: 160px;
+        }
+
+        .track.horizontal .track-line {
+          left: 32px;
+          right: 32px;
+          top: 50%;
+          bottom: auto;
+          width: auto;
+          height: 18px;
+          transform: translateY(-50%);
+        }
+
         .knob {
           position: absolute;
           left: 50%;
@@ -414,6 +461,20 @@ class ButtonSwitchCard extends HTMLElement {
 
         .knob.off {
           bottom: 38px;
+        }
+
+        .track.horizontal .knob {
+          top: 50%;
+          transform: translateY(-50%);
+        }
+
+        .track.horizontal .knob.on {
+          left: 38px;
+        }
+
+        .track.horizontal .knob.off {
+          left: auto;
+          right: 38px;
         }
 
         .knob ha-icon {
@@ -467,6 +528,11 @@ class ButtonSwitchCard extends HTMLElement {
             height: 280px;
           }
 
+          .track.horizontal {
+            width: 280px;
+            height: 140px;
+          }
+
           .knob {
             width: 106px;
             height: 106px;
@@ -479,6 +545,14 @@ class ButtonSwitchCard extends HTMLElement {
 
           .knob.off {
             bottom: 28px;
+          }
+
+          .track.horizontal .knob.on {
+            left: 28px;
+          }
+
+          .track.horizontal .knob.off {
+            right: 28px;
           }
 
           .state-text {
@@ -524,6 +598,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
       power_entity: "",
       power_value: "",
       power_unit: "W",
+      slider_orientation: "vertical",
       ...config,
     };
     this._render();
@@ -611,11 +686,43 @@ class ButtonSwitchCardEditor extends HTMLElement {
             ${this._config.compact ? "checked" : ""}
           ></ha-switch>
         </ha-formfield>
+        <label class="orientation-field">
+          <span>Slider orientation</span>
+          <select data-field="slider_orientation">
+            <option
+              value="vertical"
+              ${this._config.slider_orientation !== "horizontal" ? "selected" : ""}
+            >
+              Vertical
+            </option>
+            <option
+              value="horizontal"
+              ${this._config.slider_orientation === "horizontal" ? "selected" : ""}
+            >
+              Horizontal
+            </option>
+          </select>
+        </label>
       </div>
       <style>
         .card-config {
           display: grid;
           gap: 12px;
+        }
+
+        .orientation-field {
+          display: grid;
+          gap: 6px;
+          font-size: 14px;
+        }
+
+        .orientation-field select {
+          background: transparent;
+          color: inherit;
+          border: 1px solid rgba(127, 127, 127, 0.5);
+          border-radius: 4px;
+          padding: 8px;
+          font: inherit;
         }
       </style>
     `;
@@ -626,6 +733,10 @@ class ButtonSwitchCardEditor extends HTMLElement {
     });
 
     this.querySelectorAll("ha-switch").forEach((input) => {
+      input.addEventListener("change", (event) => this._valueChanged(event));
+    });
+
+    this.querySelectorAll('select[data-field="slider_orientation"]').forEach((input) => {
       input.addEventListener("change", (event) => this._valueChanged(event));
     });
   }
