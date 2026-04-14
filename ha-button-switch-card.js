@@ -203,8 +203,8 @@ class ButtonSwitchCard extends HTMLElement {
     const sliderOrientation =
       this._config.slider_orientation === "horizontal" ? "horizontal" : "vertical";
     const displayName = this._config.name_content === "power" && powerText ? powerText : friendlyName;
-    const showSecondaryPower =
-      Boolean(powerText) && this._config.show_power_secondary && this._config.name_content !== "power";
+    const showSecondaryPower = Boolean(powerText) && this._config.show_power_secondary;
+    const compactPrimaryText = showSecondaryPower ? powerText : isOn ? "ON" : "OFF";
     const activeButtonColor = this._getActiveButtonColor();
     const cardBackground = activeButtonColor
       ? `linear-gradient(180deg, ${activeButtonColor}, ${activeButtonColor})`
@@ -216,7 +216,7 @@ class ButtonSwitchCard extends HTMLElement {
           ${
             this._config.compact
               ? `
-          <div class="compact-title">${this._config.name_content === "power" ? powerText || title : title}</div>
+          <div class="compact-title">${title}</div>
           <div class="compact-switch-wrap">
             <div class="compact-track ${sliderOrientation}">
               <div class="compact-track-line"></div>
@@ -226,8 +226,8 @@ class ButtonSwitchCard extends HTMLElement {
             </div>
           </div>
           <div class="compact-footer">
-            <div class="compact-state ${isOn ? "active" : ""}">${isOn ? "ON" : "OFF"}</div>
-            ${showSecondaryPower ? `<div class="compact-power">${powerText}</div>` : ""}
+            <div class="compact-state ${isOn ? "active" : ""} ${showSecondaryPower ? "power" : ""}">${compactPrimaryText}</div>
+            ${showSecondaryPower ? `<div class="compact-mode">${isOn ? "ON" : "OFF"}</div>` : ""}
           </div>
           `
               : `
@@ -293,8 +293,8 @@ class ButtonSwitchCard extends HTMLElement {
           aspect-ratio: 1 / 1;
           padding: 14px;
           border-radius: 20px;
-          gap: 8px;
-          justify-content: space-between;
+          gap: 6px;
+          justify-content: flex-start;
         }
 
         .card:focus-visible {
@@ -314,7 +314,7 @@ class ButtonSwitchCard extends HTMLElement {
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           text-wrap: balance;
-          min-height: 2.2em;
+          min-height: 1.2em;
         }
 
         .compact-switch-wrap {
@@ -322,6 +322,7 @@ class ButtonSwitchCard extends HTMLElement {
           display: flex;
           align-items: center;
           justify-content: center;
+          margin-top: 2px;
         }
 
         .compact-track {
@@ -406,6 +407,7 @@ class ButtonSwitchCard extends HTMLElement {
           display: grid;
           gap: 6px;
           justify-items: center;
+          margin-top: auto;
         }
 
         .compact-state {
@@ -424,7 +426,13 @@ class ButtonSwitchCard extends HTMLElement {
           border-color: transparent;
         }
 
-        .compact-power {
+        .compact-state.power {
+          text-transform: none;
+          letter-spacing: 0.2px;
+          padding: 6px 12px;
+        }
+
+        .compact-mode {
           font-size: clamp(13px, 5.4vw, 17px);
           font-weight: 700;
           font-family: "Arial", sans-serif;
@@ -661,7 +669,7 @@ class ButtonSwitchCard extends HTMLElement {
             font-size: clamp(13px, 5.4vw, 16px);
           }
 
-          .compact-power {
+          .compact-mode {
             font-size: clamp(12px, 5vw, 15px);
           }
         }
