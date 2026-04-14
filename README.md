@@ -2,6 +2,10 @@
 
 Custom Lovelace switch card for Home Assistant with an orange button-style design.
 
+## Preview
+
+![Example image](images/switch.png)
+
 ## Card type
 
 ```yaml
