@@ -14,6 +14,7 @@ class ButtonSwitchCard extends HTMLElement {
       entity: "switch.tv",
       name: "TV",
       icon: "mdi:radiator",
+      compact: false,
     };
   }
 
@@ -34,7 +35,12 @@ class ButtonSwitchCard extends HTMLElement {
 
     this._config = {
       name: "",
+      title: "",
       icon: "mdi:radiator",
+      compact: false,
+      power_entity: "",
+      power_value: "",
+      power_unit: "W",
       on_label: "SWITCH ON",
       off_label: "SWITCH OFF",
       state_text_on: "Active",
@@ -99,6 +105,26 @@ class ButtonSwitchCard extends HTMLElement {
     }
   }
 
+  _getPowerText() {
+    if (!this._config) return "";
+
+    if (this._config.power_entity && this._hass) {
+      const powerState = this._hass.states[this._config.power_entity];
+      if (powerState) {
+        const state = powerState.state;
+        const unit = powerState.attributes?.unit_of_measurement || this._config.power_unit || "W";
+        return `${state} ${unit}`.trim();
+      }
+    }
+
+    if (this._config.power_value !== "" && this._config.power_value !== undefined) {
+      const unit = this._config.power_unit || "W";
+      return `${this._config.power_value} ${unit}`.trim();
+    }
+
+    return "";
+  }
+
   render() {
     if (!this.shadowRoot || !this._config) return;
 
@@ -106,10 +132,31 @@ class ButtonSwitchCard extends HTMLElement {
     const isOn = this._isOn(stateObj);
     const friendlyName =
       this._config.name || stateObj?.attributes?.friendly_name || this._config.entity;
+    const title = this._config.title || friendlyName;
+    const powerText = this._getPowerText();
+    const compactClass = this._config.compact ? "compact" : "";
 
     this.shadowRoot.innerHTML = `
       <ha-card>
-        <div class="card" role="button" tabindex="0" aria-label="Toggle ${friendlyName}">
+        <div class="card ${compactClass}" role="button" tabindex="0" aria-label="Toggle ${friendlyName}">
+          ${
+            this._config.compact
+              ? `
+          <div class="compact-title">${title}</div>
+          <div class="compact-switch-wrap">
+            <div class="compact-track">
+              <div class="compact-track-line"></div>
+              <div class="compact-knob ${isOn ? "on" : "off"}">
+                ${this._config.icon ? `<ha-icon icon="${this._config.icon}"></ha-icon>` : ""}
+              </div>
+            </div>
+          </div>
+          <div class="compact-footer">
+            <div class="compact-state ${isOn ? "active" : ""}">${isOn ? "ON" : "OFF"}</div>
+            ${powerText ? `<div class="compact-power">${powerText}</div>` : ""}
+          </div>
+          `
+              : `
           <div class="top-row">
             <div class="label-block">
               <div class="label-title">CURRENT</div>
@@ -137,6 +184,8 @@ class ButtonSwitchCard extends HTMLElement {
             <div class="status-pill">${isOn ? this._config.on_label : this._config.off_label}</div>
             <div class="state-text">${isOn ? this._config.state_text_on : this._config.state_text_off}</div>
           </div>
+          `
+          }
         </div>
       </ha-card>
 
@@ -165,9 +214,115 @@ class ButtonSwitchCard extends HTMLElement {
           outline: none;
         }
 
+        .card.compact {
+          min-height: 0;
+          aspect-ratio: 1 / 1;
+          padding: 16px;
+          border-radius: 20px;
+          gap: 10px;
+          justify-content: space-between;
+        }
+
         .card:focus-visible {
           box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
           border-radius: 20px;
+        }
+
+        .compact-title {
+          text-align: center;
+          font-size: 18px;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          font-family: "Arial", sans-serif;
+          line-height: 1.2;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .compact-switch-wrap {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .compact-track {
+          width: 74px;
+          height: 140px;
+          border-radius: 36px;
+          background: ${this._config.track_color};
+          position: relative;
+          border: 2px solid rgba(255, 255, 255, 0.28);
+          box-shadow: inset 0 6px 14px rgba(0, 0, 0, 0.1);
+        }
+
+        .compact-track-line {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          top: 18px;
+          bottom: 18px;
+          width: 10px;
+          border-radius: 12px;
+          background: ${this._config.track_inner_color};
+        }
+
+        .compact-knob {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 58px;
+          height: 58px;
+          border-radius: 18px;
+          background: ${this._config.knob_color};
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #666;
+          transition: top 0.25s ease, bottom 0.25s ease;
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .compact-knob.on {
+          top: 16px;
+        }
+
+        .compact-knob.off {
+          bottom: 16px;
+        }
+
+        .compact-knob ha-icon {
+          --mdc-icon-size: 26px;
+        }
+
+        .compact-footer {
+          display: grid;
+          gap: 6px;
+          justify-items: center;
+        }
+
+        .compact-state {
+          border-radius: 20px;
+          padding: 5px 12px;
+          font-weight: 700;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          font-size: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.45);
+          background: ${this._config.chip_inactive_background};
+        }
+
+        .compact-state.active {
+          background: ${this._config.chip_active_background};
+          border-color: transparent;
+        }
+
+        .compact-power {
+          font-size: 18px;
+          font-weight: 700;
+          font-family: "Arial", sans-serif;
+          line-height: 1.2;
         }
 
         .top-row {
@@ -329,6 +484,10 @@ class ButtonSwitchCard extends HTMLElement {
           .state-text {
             font-size: 28px;
           }
+
+          .card.compact {
+            padding: 14px;
+          }
         }
       </style>
     `;
@@ -359,7 +518,12 @@ class ButtonSwitchCardEditor extends HTMLElement {
     this._config = {
       entity: "",
       name: "",
+      title: "",
       icon: "mdi:radiator",
+      compact: false,
+      power_entity: "",
+      power_value: "",
+      power_unit: "W",
       ...config,
     };
     this._render();
@@ -376,9 +540,11 @@ class ButtonSwitchCardEditor extends HTMLElement {
     const field = target?.dataset?.field;
     if (!field) return;
 
-    const value = target.value.trim();
+    const value = target.type === "checkbox" ? target.checked : target.value.trim();
     const nextConfig = { ...this._config };
-    if (value) {
+    if (typeof value === "boolean") {
+      nextConfig[field] = value;
+    } else if (value) {
       nextConfig[field] = value;
     } else {
       delete nextConfig[field];
@@ -411,11 +577,40 @@ class ButtonSwitchCardEditor extends HTMLElement {
           value="${this._config.name || ""}"
         ></ha-textfield>
         <ha-textfield
+          label="Title (compact)"
+          data-field="title"
+          value="${this._config.title || ""}"
+        ></ha-textfield>
+        <ha-textfield
           label="Icon"
           helper="Example: mdi:radiator"
           data-field="icon"
           value="${this._config.icon || ""}"
         ></ha-textfield>
+        <ha-textfield
+          label="Power entity (optional)"
+          helper="Example: sensor.tv_power"
+          data-field="power_entity"
+          value="${this._config.power_entity || ""}"
+        ></ha-textfield>
+        <ha-textfield
+          label="Power value fallback"
+          helper="Example: 120"
+          data-field="power_value"
+          value="${this._config.power_value || ""}"
+        ></ha-textfield>
+        <ha-textfield
+          label="Power unit"
+          helper="Default: W"
+          data-field="power_unit"
+          value="${this._config.power_unit || ""}"
+        ></ha-textfield>
+        <ha-formfield label="Compact square layout">
+          <ha-switch
+            data-field="compact"
+            ${this._config.compact ? "checked" : ""}
+          ></ha-switch>
+        </ha-formfield>
       </div>
       <style>
         .card-config {
@@ -428,6 +623,10 @@ class ButtonSwitchCardEditor extends HTMLElement {
     this.querySelectorAll("ha-textfield").forEach((input) => {
       input.addEventListener("change", (event) => this._valueChanged(event));
       input.addEventListener("input", (event) => this._valueChanged(event));
+    });
+
+    this.querySelectorAll("ha-switch").forEach((input) => {
+      input.addEventListener("change", (event) => this._valueChanged(event));
     });
   }
 }

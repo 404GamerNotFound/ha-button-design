@@ -84,13 +84,40 @@ double_tap_action:
     entity_id: switch.living_room_lamp
 ```
 
+### Compact square example (2 cards in one row)
+
+```yaml
+type: grid
+columns: 2
+square: false
+cards:
+  - type: custom:button-switch-card
+    entity: switch.tv
+    compact: true
+    title: TV
+    icon: mdi:television
+    power_entity: sensor.tv_power
+  - type: custom:button-switch-card
+    entity: switch.console
+    compact: true
+    title: Console
+    icon: mdi:gamepad-variant
+    power_value: "85"
+    power_unit: W
+```
+
 ## Configuration options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `entity` | string | **required** | Switch entity to control (`switch.*`). |
 | `name` | string | entity friendly name | Title in the center of the card. |
+| `title` | string | `name`/friendly name | Header title used by compact mode. |
 | `icon` | string | `mdi:radiator` | Icon inside the switch knob. |
+| `compact` | boolean | `false` | Enables the compact square layout for 2-up rows. |
+| `power_entity` | string | empty | Sensor entity used to show the live power value at the bottom. |
+| `power_value` | string/number | empty | Static fallback power value shown when no sensor is provided. |
+| `power_unit` | string | `W` | Unit for `power_value` fallback or missing sensor unit. |
 | `background_start` | color string | `#ffa20f` | Gradient start color. |
 | `background_end` | color string | `#ff9800` | Gradient end color. |
 | `on_label` | string | `SWITCH ON` | Middle bottom status text when on. |
