@@ -52,6 +52,11 @@ class ButtonSwitchCard extends HTMLElement {
       knob_color: "#d9d9d9",
       chip_active_background: "rgba(216, 133, 0, 0.8)",
       chip_inactive_background: "rgba(255,255,255,0.14)",
+      slider_orientation: "vertical",
+      button_color: "",
+      name_content: "entity",
+      show_power_secondary: true,
+      power_thresholds: [],
       ...config,
     };
 
@@ -125,6 +130,66 @@ class ButtonSwitchCard extends HTMLElement {
     return "";
   }
 
+  _getPowerNumericValue() {
+    if (!this._config) return null;
+
+    if (this._config.power_entity && this._hass) {
+      const powerState = this._hass.states[this._config.power_entity];
+      if (powerState) {
+        const parsed = Number.parseFloat(powerState.state);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+    }
+
+    if (this._config.power_value !== "" && this._config.power_value !== undefined) {
+      const parsed = Number.parseFloat(this._config.power_value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
+  }
+
+  _getPowerThresholds() {
+    const rawThresholds = this._config?.power_thresholds;
+    if (!rawThresholds) return [];
+
+    let list = rawThresholds;
+    if (typeof rawThresholds === "string") {
+      try {
+        list = JSON.parse(rawThresholds);
+      } catch (error) {
+        return [];
+      }
+    }
+
+    if (!Array.isArray(list)) return [];
+
+    return list
+      .map((entry) => {
+        const threshold =
+          entry?.above ?? entry?.threshold ?? entry?.value ?? entry?.watts ?? entry?.watt;
+        const parsedThreshold = Number.parseFloat(threshold);
+        if (!Number.isFinite(parsedThreshold) || !entry?.color) return null;
+        return { threshold: parsedThreshold, color: entry.color };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.threshold - b.threshold);
+  }
+
+  _getActiveButtonColor() {
+    if (!this._config) return "";
+
+    const numericPower = this._getPowerNumericValue();
+    const thresholds = this._getPowerThresholds();
+
+    if (numericPower !== null && thresholds.length) {
+      const matched = thresholds.filter((entry) => numericPower >= entry.threshold).pop();
+      if (matched) return matched.color;
+    }
+
+    return this._config.button_color || "";
+  }
+
   render() {
     if (!this.shadowRoot || !this._config) return;
 
@@ -135,6 +200,15 @@ class ButtonSwitchCard extends HTMLElement {
     const title = this._config.title || friendlyName;
     const powerText = this._getPowerText();
     const compactClass = this._config.compact ? "compact" : "";
+    const sliderOrientation =
+      this._config.slider_orientation === "horizontal" ? "horizontal" : "vertical";
+    const displayName = this._config.name_content === "power" && powerText ? powerText : friendlyName;
+    const showSecondaryPower =
+      Boolean(powerText) && this._config.show_power_secondary && this._config.name_content !== "power";
+    const activeButtonColor = this._getActiveButtonColor();
+    const cardBackground = activeButtonColor
+      ? `linear-gradient(180deg, ${activeButtonColor}, ${activeButtonColor})`
+      : `linear-gradient(180deg, ${this._config.background_start}, ${this._config.background_end})`;
 
     this.shadowRoot.innerHTML = `
       <ha-card>
@@ -142,9 +216,9 @@ class ButtonSwitchCard extends HTMLElement {
           ${
             this._config.compact
               ? `
-          <div class="compact-title">${title}</div>
+          <div class="compact-title">${this._config.name_content === "power" ? powerText || title : title}</div>
           <div class="compact-switch-wrap">
-            <div class="compact-track">
+            <div class="compact-track ${sliderOrientation}">
               <div class="compact-track-line"></div>
               <div class="compact-knob ${isOn ? "on" : "off"}">
                 ${this._config.icon ? `<ha-icon icon="${this._config.icon}"></ha-icon>` : ""}
@@ -153,7 +227,7 @@ class ButtonSwitchCard extends HTMLElement {
           </div>
           <div class="compact-footer">
             <div class="compact-state ${isOn ? "active" : ""}">${isOn ? "ON" : "OFF"}</div>
-            ${powerText ? `<div class="compact-power">${powerText}</div>` : ""}
+            ${showSecondaryPower ? `<div class="compact-power">${powerText}</div>` : ""}
           </div>
           `
               : `
@@ -168,10 +242,10 @@ class ButtonSwitchCard extends HTMLElement {
             </div>
           </div>
 
-          <div class="main-name">${friendlyName}</div>
+          <div class="main-name">${displayName}</div>
 
           <div class="switch-wrap">
-            <div class="track">
+            <div class="track ${sliderOrientation}">
               <div class="track-line"></div>
               <div class="knob ${isOn ? "on" : "off"}">
                 ${this._config.icon ? `<ha-icon icon="${this._config.icon}"></ha-icon>` : ""}
@@ -202,7 +276,7 @@ class ButtonSwitchCard extends HTMLElement {
 
         .card {
           min-height: 470px;
-          background: linear-gradient(180deg, ${this._config.background_start}, ${this._config.background_end});
+          background: ${cardBackground};
           color: #fff;
           padding: 26px;
           display: flex;
@@ -268,6 +342,21 @@ class ButtonSwitchCard extends HTMLElement {
           background: ${this._config.track_inner_color};
         }
 
+        .compact-track.horizontal {
+          width: 140px;
+          height: 74px;
+        }
+
+        .compact-track.horizontal .compact-track-line {
+          left: 18px;
+          right: 18px;
+          top: 50%;
+          bottom: auto;
+          width: auto;
+          height: 10px;
+          transform: translateY(-50%);
+        }
+
         .compact-knob {
           position: absolute;
           left: 50%;
@@ -290,6 +379,20 @@ class ButtonSwitchCard extends HTMLElement {
 
         .compact-knob.off {
           bottom: 16px;
+        }
+
+        .compact-track.horizontal .compact-knob {
+          top: 50%;
+          transform: translateY(-50%);
+        }
+
+        .compact-track.horizontal .compact-knob.on {
+          left: 16px;
+        }
+
+        .compact-track.horizontal .compact-knob.off {
+          left: auto;
+          right: 16px;
         }
 
         .compact-knob ha-icon {
@@ -392,6 +495,21 @@ class ButtonSwitchCard extends HTMLElement {
           background: ${this._config.track_inner_color};
         }
 
+        .track.horizontal {
+          width: 340px;
+          height: 160px;
+        }
+
+        .track.horizontal .track-line {
+          left: 32px;
+          right: 32px;
+          top: 50%;
+          bottom: auto;
+          width: auto;
+          height: 18px;
+          transform: translateY(-50%);
+        }
+
         .knob {
           position: absolute;
           left: 50%;
@@ -414,6 +532,20 @@ class ButtonSwitchCard extends HTMLElement {
 
         .knob.off {
           bottom: 38px;
+        }
+
+        .track.horizontal .knob {
+          top: 50%;
+          transform: translateY(-50%);
+        }
+
+        .track.horizontal .knob.on {
+          left: 38px;
+        }
+
+        .track.horizontal .knob.off {
+          left: auto;
+          right: 38px;
         }
 
         .knob ha-icon {
@@ -467,6 +599,11 @@ class ButtonSwitchCard extends HTMLElement {
             height: 280px;
           }
 
+          .track.horizontal {
+            width: 280px;
+            height: 140px;
+          }
+
           .knob {
             width: 106px;
             height: 106px;
@@ -479,6 +616,14 @@ class ButtonSwitchCard extends HTMLElement {
 
           .knob.off {
             bottom: 28px;
+          }
+
+          .track.horizontal .knob.on {
+            left: 28px;
+          }
+
+          .track.horizontal .knob.off {
+            right: 28px;
           }
 
           .state-text {
@@ -524,6 +669,11 @@ class ButtonSwitchCardEditor extends HTMLElement {
       power_entity: "",
       power_value: "",
       power_unit: "W",
+      slider_orientation: "vertical",
+      button_color: "",
+      name_content: "entity",
+      show_power_secondary: true,
+      power_thresholds: "",
       ...config,
     };
     this._render();
@@ -605,17 +755,88 @@ class ButtonSwitchCardEditor extends HTMLElement {
           data-field="power_unit"
           value="${this._config.power_unit || ""}"
         ></ha-textfield>
+        <ha-textfield
+          label="Button color override (optional)"
+          helper="Example: #ff9800"
+          data-field="button_color"
+          value="${this._config.button_color || ""}"
+        ></ha-textfield>
+        <ha-textfield
+          label="Power thresholds JSON (optional)"
+          helper='Example: [{"above": 2000, "color": "#ff0000"}]'
+          data-field="power_thresholds"
+          value="${
+            typeof this._config.power_thresholds === "string"
+              ? this._config.power_thresholds
+              : JSON.stringify(this._config.power_thresholds || [])
+          }"
+        ></ha-textfield>
         <ha-formfield label="Compact square layout">
           <ha-switch
             data-field="compact"
             ${this._config.compact ? "checked" : ""}
           ></ha-switch>
         </ha-formfield>
+        <ha-formfield label="Show power below compact switch">
+          <ha-switch
+            data-field="show_power_secondary"
+            ${this._config.show_power_secondary ? "checked" : ""}
+          ></ha-switch>
+        </ha-formfield>
+        <label class="orientation-field">
+          <span>Name content</span>
+          <select data-field="name_content">
+            <option
+              value="entity"
+              ${this._config.name_content !== "power" ? "selected" : ""}
+            >
+              Entity name
+            </option>
+            <option
+              value="power"
+              ${this._config.name_content === "power" ? "selected" : ""}
+            >
+              Power text
+            </option>
+          </select>
+        </label>
+        <label class="orientation-field">
+          <span>Slider orientation</span>
+          <select data-field="slider_orientation">
+            <option
+              value="vertical"
+              ${this._config.slider_orientation !== "horizontal" ? "selected" : ""}
+            >
+              Vertical
+            </option>
+            <option
+              value="horizontal"
+              ${this._config.slider_orientation === "horizontal" ? "selected" : ""}
+            >
+              Horizontal
+            </option>
+          </select>
+        </label>
       </div>
       <style>
         .card-config {
           display: grid;
           gap: 12px;
+        }
+
+        .orientation-field {
+          display: grid;
+          gap: 6px;
+          font-size: 14px;
+        }
+
+        .orientation-field select {
+          background: transparent;
+          color: inherit;
+          border: 1px solid rgba(127, 127, 127, 0.5);
+          border-radius: 4px;
+          padding: 8px;
+          font: inherit;
         }
       </style>
     `;
@@ -628,6 +849,12 @@ class ButtonSwitchCardEditor extends HTMLElement {
     this.querySelectorAll("ha-switch").forEach((input) => {
       input.addEventListener("change", (event) => this._valueChanged(event));
     });
+
+    this.querySelectorAll('select[data-field="slider_orientation"], select[data-field="name_content"]').forEach(
+      (input) => {
+        input.addEventListener("change", (event) => this._valueChanged(event));
+      }
+    );
   }
 }
 
