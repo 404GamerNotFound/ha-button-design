@@ -150,3 +150,15 @@ When no action is provided, the card toggles the configured entity.
 - The card is optimized for a portrait tile style (similar to your screenshot).
 - The card uses only native Home Assistant frontend primitives.
 - All comments in source code are in English.
+
+## Related project
+
+If you like this design, check out my matching climate/heating dashboard project:
+
+- **HA Heat Design**: https://github.com/404GamerNotFound/ha-heat-design
+
+## Support
+
+If you want to support my work, you can donate here:
+
+- **PayPal**: https://www.paypal.com/paypalme/TonyBrueser
