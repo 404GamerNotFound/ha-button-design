@@ -1134,6 +1134,10 @@ if (!customElements.get("heat-switch-card")) {
   customElements.define("heat-switch-card", ButtonSwitchCard);
 }
 
+if (!customElements.get("ha-button-controller")) {
+  customElements.define("ha-button-controller", ButtonSwitchCard);
+}
+
 if (!customElements.get("button-switch-card-editor")) {
   customElements.define("button-switch-card-editor", ButtonSwitchCardEditor);
 }
@@ -1141,10 +1145,10 @@ if (!customElements.get("button-switch-card-editor")) {
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "custom:button-switch-card",
-  name: "Button Switch Card",
-  description: "Switch on/off card with a vertical button-style design.",
+  name: "HA Button Controller",
+  description: "Switch on/off controller card with a visual editor and preview support.",
   preview: true,
-  documentationURL: "https://github.com/mixelpixx/ha-button-design",
+  documentationURL: "https://github.com/404GamerNotFound/ha-button-design",
 });
 
 window.customCards.push({
@@ -1152,5 +1156,13 @@ window.customCards.push({
   name: "Heat Switch Card (alias)",
   description: "Compatibility alias for Button Switch Card.",
   preview: true,
-  documentationURL: "https://github.com/mixelpixx/ha-button-design",
+  documentationURL: "https://github.com/404GamerNotFound/ha-button-design",
+});
+
+window.customCards.push({
+  type: "custom:ha-button-controller",
+  name: "HA Button Controller (alias)",
+  description: "Alias card type for the HA Button Controller with full UI editor support.",
+  preview: true,
+  documentationURL: "https://github.com/404GamerNotFound/ha-button-design",
 });
