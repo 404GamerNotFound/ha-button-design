@@ -1143,26 +1143,32 @@ if (!customElements.get("button-switch-card-editor")) {
 }
 
 window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "custom:button-switch-card",
-  name: "HA Button Controller",
-  description: "Switch on/off controller card with a visual editor and preview support.",
-  preview: true,
-  documentationURL: "https://github.com/404GamerNotFound/ha-button-design",
-});
 
-window.customCards.push({
-  type: "custom:heat-switch-card",
-  name: "Heat Switch Card (alias)",
-  description: "Compatibility alias for Button Switch Card.",
-  preview: true,
-  documentationURL: "https://github.com/404GamerNotFound/ha-button-design",
-});
+const buttonSwitchPickerCards = [
+  {
+    type: "button-switch-card",
+    name: "Button Switch Card",
+    description: "Switch on/off controller card with a visual editor and preview support.",
+  },
+  {
+    type: "heat-switch-card",
+    name: "Heat Switch Card (alias)",
+    description: "Compatibility alias for Button Switch Card.",
+  },
+  {
+    type: "ha-button-controller",
+    name: "HA Button Controller (alias)",
+    description: "Alias card type for the HA Button Controller with full UI editor support.",
+  },
+];
 
-window.customCards.push({
-  type: "custom:ha-button-controller",
-  name: "HA Button Controller (alias)",
-  description: "Alias card type for the HA Button Controller with full UI editor support.",
-  preview: true,
-  documentationURL: "https://github.com/404GamerNotFound/ha-button-design",
+buttonSwitchPickerCards.forEach((cardDefinition) => {
+  const alreadyRegistered = window.customCards.some((entry) => entry.type === cardDefinition.type);
+  if (alreadyRegistered) return;
+
+  window.customCards.push({
+    ...cardDefinition,
+    preview: true,
+    documentationURL: "https://github.com/404GamerNotFound/ha-button-design",
+  });
 });
