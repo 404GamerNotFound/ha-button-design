@@ -19,7 +19,7 @@ type: custom:heat-switch-card
 ```
 
 Both card types are registered for the Dashboard card picker with preview support.
-The visual editor includes a switch entity field (for example `switch.tv`) when adding the card.
+The visual editor now exposes all card settings (labels, colors, thresholds, and actions), so YAML is optional.
 
 ## Installation
 
@@ -134,7 +134,7 @@ cards:
 | `chip_active_background` | color string | `rgba(216, 133, 0, 0.8)` | Left chip color when switch is on. |
 | `chip_inactive_background` | color string | `rgba(255,255,255,0.14)` | Chip color for inactive style. |
 | `tap_action` | action config | toggle | Action on click / Enter / Space. |
-| `hold_action` | action config | toggle | Action on right click (context menu). |
+| `hold_action` | action config | more-info | Action on right click (context menu). |
 | `double_tap_action` | action config | toggle | Action on double click. |
 
 ## Supported actions
