@@ -127,6 +127,8 @@ cards:
 | `title` | string | `name`/friendly name | Header title used by compact mode. |
 | `icon` | string | `mdi:radiator` | Icon inside the switch knob. |
 | `compact` | boolean | `false` | Enables the compact square layout for 2-up rows. |
+| `slider_orientation` | string | `vertical` | Switch direction (`vertical` or `horizontal`). |
+| `reverse_direction` | boolean | `false` | Reverses knob travel direction (for example horizontal: left=on, right=off). |
 | `power_entity` | string | empty | Sensor entity used to show the live power value at the bottom. |
 | `power_value` | string/number | empty | Static fallback power value shown when no sensor is provided. |
 | `power_unit` | string | `W` | Unit for `power_value` fallback or missing sensor unit. |
@@ -134,8 +136,10 @@ cards:
 | `background_end` | color string | `#ff9800` | Gradient end color. |
 | `on_label` | string | `SWITCH ON` | Middle bottom status text when on. |
 | `off_label` | string | `SWITCH OFF` | Middle bottom status text when off. |
+| `unavailable_label` | string | `UNAVAILABLE` | Middle bottom status text when the switch is unavailable/offline. |
 | `state_text_on` | string | `Active` | Right bottom label when on. |
 | `state_text_off` | string | `Idle` | Right bottom label when off. |
+| `state_text_unavailable` | string | `Not available` | Right bottom label when the switch is unavailable/offline. |
 | `track_color` | color string | `rgba(255,255,255,0.25)` | Outer switch track color. |
 | `track_inner_color` | color string | `rgba(255,255,255,0.45)` | Vertical center line color. |
 | `knob_color` | color string | `#d9d9d9` | Slider knob color. |
@@ -158,12 +162,14 @@ When no action is provided, the card toggles the configured entity.
 - The card is optimized for a portrait tile style (similar to your screenshot).
 - The card uses only native Home Assistant frontend primitives.
 - All comments in source code are in English.
+- If the switch state is `unavailable`, the card shows an unavailable state and opens more-info instead of toggling.
 
-## Related project
+## Related projects
 
-If you like this design, check out my matching climate/heating dashboard project:
+If you like this design, check out these related projects:
 
-- **HA Heat Design**: https://github.com/404GamerNotFound/ha-heat-design
+- **HA Heat Design** (matching climate/heating dashboard): https://github.com/404GamerNotFound/ha-heat-design
+- **More slider-style projects by 404GamerNotFound**: https://github.com/404GamerNotFound?tab=repositories
 
 ## Support
 
