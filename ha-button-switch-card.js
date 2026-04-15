@@ -956,18 +956,18 @@ class ButtonSwitchCardEditor extends HTMLElement {
         <ha-textfield label="Knob color" data-field="knob_color" value="${this._config.knob_color || ""}"></ha-textfield>
         <ha-textfield label="Chip active background" data-field="chip_active_background" value="${this._config.chip_active_background || ""}"></ha-textfield>
         <ha-textfield label="Chip inactive background" data-field="chip_inactive_background" value="${this._config.chip_inactive_background || ""}"></ha-textfield>
-        <ha-formfield label="Compact square layout">
-          <ha-switch
-            data-field="compact"
-            ${this._config.compact ? "checked" : ""}
-          ></ha-switch>
-        </ha-formfield>
-        <ha-formfield label="Show power below compact switch">
-          <ha-switch
+        <label class="toggle-field">
+          <span>Compact square layout</span>
+          <input type="checkbox" data-field="compact" ${this._config.compact ? "checked" : ""} />
+        </label>
+        <label class="toggle-field">
+          <span>Show power below compact switch</span>
+          <input
+            type="checkbox"
             data-field="show_power_secondary"
             ${this._config.show_power_secondary ? "checked" : ""}
-          ></ha-switch>
-        </ha-formfield>
+          />
+        </label>
         <label class="orientation-field">
           <span>Name content</span>
           <select data-field="name_content">
@@ -1031,6 +1031,14 @@ class ButtonSwitchCardEditor extends HTMLElement {
         .orientation-field {
           display: grid;
           gap: 6px;
+          font-size: 14px;
+        }
+
+        .toggle-field {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
           font-size: 14px;
         }
 
@@ -1104,7 +1112,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
       entityPicker.addEventListener("change", (event) => this._valueChanged(event));
     }
 
-    this.querySelectorAll("ha-switch").forEach((input) => {
+    this.querySelectorAll('input[type="checkbox"][data-field]').forEach((input) => {
       input.addEventListener("change", (event) => this._valueChanged(event));
     });
 
