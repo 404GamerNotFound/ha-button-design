@@ -27,6 +27,8 @@ type: custom:ha-button-controller
 All card types are registered for the Dashboard card picker with preview support.
 The visual editor now exposes all card settings (labels, colors, thresholds, and actions), so YAML is optional.
 
+If the card picker does not show **Button Switch Card** immediately, do a hard browser refresh and then reload Home Assistant resources.
+
 ## Installation
 
 ### HACS (recommended)
