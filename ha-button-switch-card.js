@@ -4,8 +4,13 @@
  */
 
 class ButtonSwitchCard extends HTMLElement {
-  static getConfigElement() {
+  static async getConfigElement() {
+    await customElements.whenDefined("button-switch-card-editor");
     return document.createElement("button-switch-card-editor");
+  }
+
+  getConfigElement() {
+    return this.constructor.getConfigElement();
   }
 
   static getStubConfig() {
@@ -16,6 +21,10 @@ class ButtonSwitchCard extends HTMLElement {
       icon: "mdi:radiator",
       compact: false,
     };
+  }
+
+  getStubConfig() {
+    return this.constructor.getStubConfig();
   }
 
   constructor() {
@@ -43,8 +52,10 @@ class ButtonSwitchCard extends HTMLElement {
       power_unit: "W",
       on_label: "SWITCH ON",
       off_label: "SWITCH OFF",
+      unavailable_label: "UNAVAILABLE",
       state_text_on: "Active",
       state_text_off: "Idle",
+      state_text_unavailable: "Not available",
       background_start: "#ffa20f",
       background_end: "#ff9800",
       track_color: "rgba(255,255,255,0.25)",
@@ -53,6 +64,7 @@ class ButtonSwitchCard extends HTMLElement {
       chip_active_background: "rgba(216, 133, 0, 0.8)",
       chip_inactive_background: "rgba(255,255,255,0.14)",
       slider_orientation: "vertical",
+      reverse_direction: false,
       button_color: "",
       name_content: "entity",
       show_power_secondary: true,
@@ -80,6 +92,10 @@ class ButtonSwitchCard extends HTMLElement {
     return stateObj.state === "on";
   }
 
+  _isUnavailable(stateObj) {
+    return stateObj?.state === "unavailable";
+  }
+
   _toggleSwitch() {
     if (!this._hass || !this._config) return;
 
@@ -89,6 +105,18 @@ class ButtonSwitchCard extends HTMLElement {
 
   _fireAction(actionName) {
     if (!this._hass || !this._config) return;
+    const stateObj = this._hass.states[this._config.entity];
+    if (this._isUnavailable(stateObj)) {
+      this.dispatchEvent(
+        new CustomEvent("hass-more-info", {
+          bubbles: true,
+          composed: true,
+          detail: { entityId: this._config.entity },
+        })
+      );
+      return;
+    }
+
     const action = this._config[actionName];
 
     if (!action || !action.action || action.action === "toggle") {
@@ -197,7 +225,8 @@ class ButtonSwitchCard extends HTMLElement {
     if (!this.shadowRoot || !this._config) return;
 
     const stateObj = this._hass ? this._hass.states[this._config.entity] : null;
-    const isOn = this._isOn(stateObj);
+    const isUnavailable = this._isUnavailable(stateObj);
+    const isOn = !isUnavailable && this._isOn(stateObj);
     const friendlyName =
       this._config.name || stateObj?.attributes?.friendly_name || this._config.entity;
     const title = this._config.title || friendlyName;
@@ -205,17 +234,49 @@ class ButtonSwitchCard extends HTMLElement {
     const compactClass = this._config.compact ? "compact" : "";
     const sliderOrientation =
       this._config.slider_orientation === "horizontal" ? "horizontal" : "vertical";
+    const reverseDirection = Boolean(this._config.reverse_direction);
     const displayName = this._config.name_content === "power" && powerText ? powerText : friendlyName;
-    const showSecondaryPower = Boolean(powerText) && this._config.show_power_secondary;
-    const compactPrimaryText = showSecondaryPower ? powerText : isOn ? "ON" : "OFF";
+    const showSecondaryPower = !isUnavailable && Boolean(powerText) && this._config.show_power_secondary;
+    const compactPrimaryText = isUnavailable
+      ? this._config.unavailable_label
+      : showSecondaryPower
+      ? powerText
+      : isOn
+      ? "ON"
+      : "OFF";
     const activeButtonColor = this._getActiveButtonColor();
     const cardBackground = activeButtonColor
       ? `linear-gradient(180deg, ${activeButtonColor}, ${activeButtonColor})`
       : `linear-gradient(180deg, ${this._config.background_start}, ${this._config.background_end})`;
 
+    const regularKnobPositionClass = isUnavailable
+      ? "unavailable"
+      : sliderOrientation === "horizontal"
+      ? isOn === reverseDirection
+        ? "start"
+        : "end"
+      : isOn !== reverseDirection
+      ? "start"
+      : "end";
+    const compactKnobPositionClass = regularKnobPositionClass;
+    const currentStateText = isUnavailable ? "N/A" : isOn ? "ON" : "OFF";
+    const statusPillText = isUnavailable
+      ? this._config.unavailable_label
+      : isOn
+      ? this._config.on_label
+      : this._config.off_label;
+    const stateText = isUnavailable
+      ? this._config.state_text_unavailable
+      : isOn
+      ? this._config.state_text_on
+      : this._config.state_text_off;
+    const chipClass = isUnavailable ? "unavailable" : isOn ? "active" : "";
+
     this.shadowRoot.innerHTML = `
       <ha-card>
-        <div class="card ${compactClass}" role="button" tabindex="0" aria-label="Toggle ${friendlyName}">
+        <div class="card ${compactClass}" role="button" tabindex="0" aria-label="${
+          isUnavailable ? `${friendlyName} unavailable` : `Toggle ${friendlyName}`
+        }">
           ${
             this._config.compact
               ? `
@@ -223,7 +284,7 @@ class ButtonSwitchCard extends HTMLElement {
           <div class="compact-switch-wrap">
             <div class="compact-track ${sliderOrientation}">
               <div class="compact-track-line"></div>
-              <div class="compact-knob ${isOn ? "on" : "off"}">
+              <div class="compact-knob ${compactKnobPositionClass}">
                 ${this._config.icon ? `<ha-icon icon="${this._config.icon}"></ha-icon>` : ""}
               </div>
             </div>
@@ -237,7 +298,7 @@ class ButtonSwitchCard extends HTMLElement {
           <div class="top-row">
             <div class="label-block">
               <div class="label-title">CURRENT</div>
-              <div class="label-value">${isOn ? "ON" : "OFF"}</div>
+              <div class="label-value">${currentStateText}</div>
             </div>
             <div class="label-block right">
               <div class="label-title">ENTITY</div>
@@ -250,16 +311,16 @@ class ButtonSwitchCard extends HTMLElement {
           <div class="switch-wrap">
             <div class="track ${sliderOrientation}">
               <div class="track-line"></div>
-              <div class="knob ${isOn ? "on" : "off"}">
+              <div class="knob ${regularKnobPositionClass}">
                 ${this._config.icon ? `<ha-icon icon="${this._config.icon}"></ha-icon>` : ""}
               </div>
             </div>
           </div>
 
           <div class="bottom-row">
-            <div class="chip ${isOn ? "active" : ""}">${isOn ? "ON" : "OFF"}</div>
-            <div class="status-pill">${isOn ? this._config.on_label : this._config.off_label}</div>
-            <div class="state-text">${isOn ? this._config.state_text_on : this._config.state_text_off}</div>
+            <div class="chip ${chipClass}">${currentStateText}</div>
+            <div class="status-pill">${statusPillText}</div>
+            <div class="state-text">${stateText}</div>
           </div>
           `
           }
@@ -380,11 +441,11 @@ class ButtonSwitchCard extends HTMLElement {
           box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
         }
 
-        .compact-knob.on {
+        .compact-knob.start {
           top: 12px;
         }
 
-        .compact-knob.off {
+        .compact-knob.end {
           bottom: 12px;
         }
 
@@ -393,13 +454,20 @@ class ButtonSwitchCard extends HTMLElement {
           transform: translateY(-50%);
         }
 
-        .compact-track.horizontal .compact-knob.on {
+        .compact-track.horizontal .compact-knob.start {
           left: 12px;
         }
 
-        .compact-track.horizontal .compact-knob.off {
+        .compact-track.horizontal .compact-knob.end {
           left: auto;
           right: 12px;
+        }
+
+        .compact-knob.unavailable {
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          opacity: 0.6;
         }
 
         .compact-knob ha-icon {
@@ -544,11 +612,11 @@ class ButtonSwitchCard extends HTMLElement {
           box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
         }
 
-        .knob.on {
+        .knob.start {
           top: 38px;
         }
 
-        .knob.off {
+        .knob.end {
           bottom: 38px;
         }
 
@@ -557,13 +625,20 @@ class ButtonSwitchCard extends HTMLElement {
           transform: translateY(-50%);
         }
 
-        .track.horizontal .knob.on {
+        .track.horizontal .knob.start {
           left: 38px;
         }
 
-        .track.horizontal .knob.off {
+        .track.horizontal .knob.end {
           left: auto;
           right: 38px;
+        }
+
+        .knob.unavailable {
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          opacity: 0.6;
         }
 
         .knob ha-icon {
@@ -593,6 +668,10 @@ class ButtonSwitchCard extends HTMLElement {
         .chip.active {
           background: ${this._config.chip_active_background};
           border-color: transparent;
+        }
+
+        .chip.unavailable {
+          opacity: 0.8;
         }
 
         .state-text {
@@ -628,19 +707,19 @@ class ButtonSwitchCard extends HTMLElement {
             border-radius: 30px;
           }
 
-          .knob.on {
+          .knob.start {
             top: 28px;
           }
 
-          .knob.off {
+          .knob.end {
             bottom: 28px;
           }
 
-          .track.horizontal .knob.on {
+          .track.horizontal .knob.start {
             left: 28px;
           }
 
-          .track.horizontal .knob.off {
+          .track.horizontal .knob.end {
             right: 28px;
           }
 
@@ -701,6 +780,21 @@ class ButtonSwitchCard extends HTMLElement {
 }
 
 class ButtonSwitchCardEditor extends HTMLElement {
+  _emitConfigChanged(nextConfig, rerender = false) {
+    this._config = nextConfig;
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { config: nextConfig },
+      })
+    );
+
+    if (rerender) {
+      this._render();
+    }
+  }
+
   setConfig(config) {
     this._config = {
       entity: "",
@@ -712,14 +806,17 @@ class ButtonSwitchCardEditor extends HTMLElement {
       power_value: "",
       power_unit: "W",
       slider_orientation: "vertical",
+      reverse_direction: false,
       button_color: "",
       name_content: "entity",
       show_power_secondary: true,
       power_thresholds: [],
       on_label: "SWITCH ON",
       off_label: "SWITCH OFF",
+      unavailable_label: "UNAVAILABLE",
       state_text_on: "Active",
       state_text_off: "Idle",
+      state_text_unavailable: "Not available",
       background_start: "#ffa20f",
       background_end: "#ff9800",
       track_color: "rgba(255,255,255,0.25)",
@@ -760,6 +857,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
         ? rawValue.trim()
         : rawValue;
     const nextConfig = { ...this._config };
+    const previousValue = nextConfig[field];
     if (typeof value === "boolean") {
       nextConfig[field] = value;
     } else if (value) {
@@ -768,14 +866,8 @@ class ButtonSwitchCardEditor extends HTMLElement {
       delete nextConfig[field];
     }
 
-    this._config = nextConfig;
-    this.dispatchEvent(
-      new CustomEvent("config-changed", {
-        bubbles: true,
-        composed: true,
-        detail: { config: nextConfig },
-      })
-    );
+    if (previousValue === nextConfig[field]) return;
+    this._emitConfigChanged(nextConfig);
   }
 
   _actionChanged(event) {
@@ -805,14 +897,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
       currentAction.action = "toggle";
     }
     nextConfig[actionField] = currentAction;
-    this._config = nextConfig;
-    this.dispatchEvent(
-      new CustomEvent("config-changed", {
-        bubbles: true,
-        composed: true,
-        detail: { config: nextConfig },
-      })
-    );
+    this._emitConfigChanged(nextConfig);
   }
 
   _thresholdChanged(index, key, value) {
@@ -820,43 +905,19 @@ class ButtonSwitchCardEditor extends HTMLElement {
     const current = { ...(thresholds[index] || { above: "", color: "#ff0000" }) };
     current[key] = value;
     thresholds[index] = current;
-    this._config = { ...this._config, power_thresholds: thresholds };
-    this.dispatchEvent(
-      new CustomEvent("config-changed", {
-        bubbles: true,
-        composed: true,
-        detail: { config: this._config },
-      })
-    );
-    this._render();
+    this._emitConfigChanged({ ...this._config, power_thresholds: thresholds }, true);
   }
 
   _addThreshold() {
     const thresholds = [...(this._config.power_thresholds || [])];
     thresholds.push({ above: "", color: "#ff0000" });
-    this._config = { ...this._config, power_thresholds: thresholds };
-    this.dispatchEvent(
-      new CustomEvent("config-changed", {
-        bubbles: true,
-        composed: true,
-        detail: { config: this._config },
-      })
-    );
-    this._render();
+    this._emitConfigChanged({ ...this._config, power_thresholds: thresholds }, true);
   }
 
   _removeThreshold(index) {
     const thresholds = [...(this._config.power_thresholds || [])];
     thresholds.splice(index, 1);
-    this._config = { ...this._config, power_thresholds: thresholds };
-    this.dispatchEvent(
-      new CustomEvent("config-changed", {
-        bubbles: true,
-        composed: true,
-        detail: { config: this._config },
-      })
-    );
-    this._render();
+    this._emitConfigChanged({ ...this._config, power_thresholds: thresholds }, true);
   }
 
   _renderActionFields(actionField, label) {
@@ -959,8 +1020,10 @@ class ButtonSwitchCardEditor extends HTMLElement {
         ></ha-textfield>
         <ha-textfield label="On label" data-field="on_label" value="${this._config.on_label || ""}"></ha-textfield>
         <ha-textfield label="Off label" data-field="off_label" value="${this._config.off_label || ""}"></ha-textfield>
+        <ha-textfield label="Unavailable label" data-field="unavailable_label" value="${this._config.unavailable_label || ""}"></ha-textfield>
         <ha-textfield label="State text when on" data-field="state_text_on" value="${this._config.state_text_on || ""}"></ha-textfield>
         <ha-textfield label="State text when off" data-field="state_text_off" value="${this._config.state_text_off || ""}"></ha-textfield>
+        <ha-textfield label="State text when unavailable" data-field="state_text_unavailable" value="${this._config.state_text_unavailable || ""}"></ha-textfield>
         <ha-textfield label="Background start" data-field="background_start" value="${this._config.background_start || ""}"></ha-textfield>
         <ha-textfield label="Background end" data-field="background_end" value="${this._config.background_end || ""}"></ha-textfield>
         <ha-textfield label="Track color" data-field="track_color" value="${this._config.track_color || ""}"></ha-textfield>
@@ -1013,6 +1076,14 @@ class ButtonSwitchCardEditor extends HTMLElement {
               Horizontal
             </option>
           </select>
+        </label>
+        <label class="toggle-field">
+          <span>Reverse switch direction</span>
+          <input
+            type="checkbox"
+            data-field="reverse_direction"
+            ${this._config.reverse_direction ? "checked" : ""}
+          />
         </label>
         ${this._renderActionFields("tap_action", "Tap action")}
         ${this._renderActionFields("hold_action", "Hold action")}
