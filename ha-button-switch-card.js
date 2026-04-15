@@ -897,14 +897,26 @@ class ButtonSwitchCardEditor extends HTMLElement {
   _render() {
     if (!this._config) return;
 
-    this.innerHTML = `
-      <div class="card-config">
+    const entityField = this._hass
+      ? `
         <ha-entity-picker
           label="Switch entity"
-          include-domains="switch"
           data-field="entity"
           value="${this._config.entity || ""}"
         ></ha-entity-picker>
+      `
+      : `
+        <ha-textfield
+          label="Switch entity"
+          helper="Example: switch.tv"
+          data-field="entity"
+          value="${this._config.entity || ""}"
+        ></ha-textfield>
+      `;
+
+    this.innerHTML = `
+      <div class="card-config">
+        ${entityField}
         <ha-textfield
           label="Name"
           data-field="name"
@@ -1108,6 +1120,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
     const entityPicker = this.querySelector('ha-entity-picker[data-field="entity"]');
     if (entityPicker) {
       entityPicker.hass = this._hass;
+      entityPicker.includeDomains = ["switch"];
       entityPicker.addEventListener("value-changed", (event) => this._valueChanged(event));
       entityPicker.addEventListener("change", (event) => this._valueChanged(event));
     }
