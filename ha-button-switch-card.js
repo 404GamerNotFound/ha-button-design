@@ -68,6 +68,7 @@ class ButtonSwitchCard extends HTMLElement {
       button_color: "",
       name_content: "entity",
       show_power_secondary: true,
+      show_on_off_label: true,
       power_thresholds: [],
       tap_action: { action: "toggle" },
       hold_action: { action: "more-info" },
@@ -298,7 +299,11 @@ class ButtonSwitchCard extends HTMLElement {
           </div>
           <div class="compact-footer">
             <div class="compact-state ${isOn ? "active" : ""} ${showSecondaryPower ? "power" : ""}">${compactPrimaryText}</div>
-            ${showSecondaryPower ? `<div class="compact-mode">${isOn ? "ON" : "OFF"}</div>` : ""}
+            ${
+              showSecondaryPower && this._config.show_on_off_label !== false
+                ? `<div class="compact-mode">${isOn ? "ON" : "OFF"}</div>`
+                : ""
+            }
           </div>
           `
               : `
@@ -326,7 +331,11 @@ class ButtonSwitchCard extends HTMLElement {
 
           <div class="bottom-row">
             <div class="chip ${chipClass}">${currentStateText}</div>
-            <div class="status-pill">${statusPillText}</div>
+            ${
+              this._config.show_on_off_label !== false
+                ? `<div class="status-pill">${statusPillText}</div>`
+                : ""
+            }
             <div class="state-text">${stateText}</div>
           </div>
           `
@@ -855,6 +864,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
       button_color: "",
       name_content: "entity",
       show_power_secondary: true,
+      show_on_off_label: true,
       power_thresholds: [],
       on_label: "SWITCH ON",
       off_label: "SWITCH OFF",
@@ -1090,6 +1100,14 @@ class ButtonSwitchCardEditor extends HTMLElement {
             ${this._config.show_power_secondary ? "checked" : ""}
           />
         </label>
+        <label class="toggle-field">
+          <span>Show ON/OFF label</span>
+          <input
+            type="checkbox"
+            data-field="show_on_off_label"
+            ${this._config.show_on_off_label !== false ? "checked" : ""}
+          />
+        </label>
         <label class="orientation-field">
           <span>Name content</span>
           <select data-field="name_content">
@@ -1223,9 +1241,13 @@ class ButtonSwitchCardEditor extends HTMLElement {
       input.addEventListener("input", (event) => this._valueChanged(event));
     });
 
-    this.querySelectorAll("ha-textfield[data-action-field], select[data-action-field]").forEach((input) => {
+    this.querySelectorAll("ha-textfield[data-action-field]").forEach((input) => {
       input.addEventListener("change", (event) => this._actionChanged(event));
       input.addEventListener("input", (event) => this._actionChanged(event));
+    });
+
+    this.querySelectorAll("select[data-action-field]").forEach((input) => {
+      input.addEventListener("change", (event) => this._actionChanged(event));
     });
 
     this.querySelectorAll("ha-textfield[data-threshold-index]").forEach((input) => {
