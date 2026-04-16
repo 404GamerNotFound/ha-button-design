@@ -375,7 +375,7 @@ class ButtonSwitchCard extends HTMLElement {
 
         .compact-title {
           text-align: center;
-          font-size: clamp(14px, 5.6vw, 18px);
+          font-size: clamp(16px, 6.2vw, 22px);
           font-weight: 700;
           letter-spacing: 0.3px;
           font-family: "Arial", sans-serif;
@@ -397,9 +397,9 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .compact-track {
-          width: 32px;
-          height: 61px;
-          border-radius: 8px;
+          width: 40px;
+          height: 74px;
+          border-radius: 10px;
           background: ${this._config.track_color};
           position: relative;
           border: 2px solid rgba(255, 255, 255, 0.28);
@@ -410,25 +410,25 @@ class ButtonSwitchCard extends HTMLElement {
           position: absolute;
           left: 50%;
           transform: translateX(-50%);
-          top: 9px;
-          bottom: 9px;
-          width: 5px;
+          top: 10px;
+          bottom: 10px;
+          width: 6px;
           border-radius: 12px;
           background: ${this._config.track_inner_color};
         }
 
         .compact-track.horizontal {
-          width: 61px;
-          height: 32px;
+          width: 74px;
+          height: 40px;
         }
 
         .compact-track.horizontal .compact-track-line {
-          left: 9px;
-          right: 9px;
+          left: 10px;
+          right: 10px;
           top: 50%;
           bottom: auto;
           width: auto;
-          height: 5px;
+          height: 6px;
           transform: translateY(-50%);
         }
 
@@ -436,9 +436,9 @@ class ButtonSwitchCard extends HTMLElement {
           position: absolute;
           left: 50%;
           transform: translateX(-50%);
-          width: 24px;
-          height: 24px;
-          border-radius: 8px;
+          width: 30px;
+          height: 30px;
+          border-radius: 10px;
           background: ${this._config.knob_color};
           display: flex;
           align-items: center;
@@ -449,11 +449,11 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .compact-knob.start {
-          top: 6px;
+          top: 7px;
         }
 
         .compact-knob.end {
-          bottom: 6px;
+          bottom: 7px;
         }
 
         .compact-track.horizontal .compact-knob {
@@ -462,12 +462,12 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .compact-track.horizontal .compact-knob.start {
-          left: 6px;
+          left: 7px;
         }
 
         .compact-track.horizontal .compact-knob.end {
           left: auto;
-          right: 6px;
+          right: 7px;
         }
 
         .compact-knob.unavailable {
@@ -478,7 +478,7 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .compact-knob ha-icon {
-          --mdc-icon-size: 12px;
+          --mdc-icon-size: 15px;
         }
 
         .compact-footer {
@@ -490,11 +490,11 @@ class ButtonSwitchCard extends HTMLElement {
 
         .compact-state {
           border-radius: 12px;
-          padding: 5px 12px;
+          padding: 6px 14px;
           font-weight: 700;
           letter-spacing: 1px;
           text-transform: uppercase;
-          font-size: 12px;
+          font-size: 14px;
           border: 1px solid rgba(255, 255, 255, 0.45);
           background: ${this._config.chip_inactive_background};
         }
@@ -511,7 +511,7 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .compact-mode {
-          font-size: clamp(13px, 5.4vw, 17px);
+          font-size: clamp(16px, 6vw, 21px);
           font-weight: 700;
           font-family: "Arial", sans-serif;
           line-height: 1.1;
@@ -787,7 +787,45 @@ class ButtonSwitchCard extends HTMLElement {
 }
 
 class ButtonSwitchCardEditor extends HTMLElement {
+  _captureFocusState(sourceElement = null) {
+    const activeElement = sourceElement || this.querySelector("ha-textfield:focus, select:focus, input:focus, ha-entity-picker:focus");
+    if (!activeElement) {
+      this._focusState = null;
+      return;
+    }
+
+    const valueElement = activeElement.inputElement || activeElement;
+    this._focusState = {
+      selector: activeElement.tagName
+        ? `${activeElement.tagName.toLowerCase()}${activeElement.dataset?.field ? `[data-field="${activeElement.dataset.field}"]` : ""}${activeElement.dataset?.actionField ? `[data-action-field="${activeElement.dataset.actionField}"][data-action-key="${activeElement.dataset.actionKey}"]` : ""}${activeElement.dataset?.thresholdIndex ? `[data-threshold-index="${activeElement.dataset.thresholdIndex}"][data-threshold-key="${activeElement.dataset.thresholdKey}"]` : ""}`
+        : null,
+      selectionStart: typeof valueElement.selectionStart === "number" ? valueElement.selectionStart : null,
+      selectionEnd: typeof valueElement.selectionEnd === "number" ? valueElement.selectionEnd : null,
+    };
+  }
+
+  _restoreFocusState() {
+    if (!this._focusState?.selector) return;
+
+    requestAnimationFrame(() => {
+      const target = this.querySelector(this._focusState.selector);
+      if (!target) return;
+      target.focus();
+
+      const valueElement = target.inputElement || target;
+      if (
+        valueElement &&
+        typeof valueElement.setSelectionRange === "function" &&
+        this._focusState.selectionStart !== null &&
+        this._focusState.selectionEnd !== null
+      ) {
+        valueElement.setSelectionRange(this._focusState.selectionStart, this._focusState.selectionEnd);
+      }
+    });
+  }
+
   _emitConfigChanged(nextConfig, rerender = false) {
+    this._captureFocusState(this._lastInteractedField);
     this._config = nextConfig;
     this.dispatchEvent(
       new CustomEvent("config-changed", {
@@ -852,6 +890,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
   _valueChanged(event) {
     if (!this._config) return;
     const target = event.target;
+    this._lastInteractedField = target;
     const field = target?.dataset?.field;
     if (!field) return;
 
@@ -880,6 +919,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
   _actionChanged(event) {
     if (!this._config) return;
     const target = event.target;
+    this._lastInteractedField = target;
     const actionField = target?.dataset?.actionField;
     const key = target?.dataset?.actionKey;
     if (!actionField || !key) return;
@@ -1222,6 +1262,8 @@ class ButtonSwitchCardEditor extends HTMLElement {
       const index = Number(button.dataset.removeThreshold);
       button.addEventListener("click", () => this._removeThreshold(index));
     });
+
+    this._restoreFocusState();
   }
 }
 
