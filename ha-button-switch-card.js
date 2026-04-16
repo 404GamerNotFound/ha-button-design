@@ -87,6 +87,13 @@ class ButtonSwitchCard extends HTMLElement {
     return 2;
   }
 
+  getGridOptions() {
+    const compact = Boolean(this._config?.compact);
+    return compact
+      ? { rows: 4, columns: 6, min_rows: 4, min_columns: 6 }
+      : { rows: 8, columns: 12, min_rows: 6, min_columns: 12 };
+  }
+
   _isOn(stateObj) {
     if (!stateObj) return false;
     return stateObj.state === "on";
@@ -333,7 +340,7 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         ha-card {
-          border-radius: 14px;
+          border-radius: 18px;
           overflow: hidden;
           box-shadow: none;
         }
@@ -356,14 +363,14 @@ class ButtonSwitchCard extends HTMLElement {
           min-height: 0;
           aspect-ratio: 1 / 1;
           padding: 14px;
-          border-radius: 12px;
+          border-radius: 16px;
           gap: 6px;
           justify-content: flex-start;
         }
 
         .card:focus-visible {
           box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
-          border-radius: 12px;
+          border-radius: 16px;
         }
 
         .compact-title {
@@ -655,7 +662,7 @@ class ButtonSwitchCard extends HTMLElement {
 
         .chip,
         .status-pill {
-          border-radius: 14px;
+          border-radius: 18px;
           padding: 5px 8px;
           font-weight: 700;
           letter-spacing: 1px;
