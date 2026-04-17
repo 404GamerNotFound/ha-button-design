@@ -19,7 +19,7 @@ class ButtonSwitchCard extends HTMLElement {
       entity: "switch.tv",
       name: "TV",
       icon: "mdi:radiator",
-      compact: false,
+      layout_variant: "compact",
     };
   }
 
@@ -42,11 +42,22 @@ class ButtonSwitchCard extends HTMLElement {
       throw new Error("Button Switch Card: The entity must be from the switch domain (switch.*).");
     }
 
+    const hasLegacyCompactFlag = typeof config.compact === "boolean";
+    const requestedLayoutVariant =
+      config.layout_variant === "large"
+        ? "large"
+        : config.layout_variant === "compact"
+        ? "compact"
+        : hasLegacyCompactFlag && config.compact === false
+        ? "large"
+        : "compact";
+
     this._config = {
       name: "",
       title: "",
       icon: "mdi:radiator",
-      compact: false,
+      layout_variant: requestedLayoutVariant,
+      compact: requestedLayoutVariant === "compact",
       power_entity: "",
       power_value: "",
       power_unit: "W",
@@ -76,6 +87,11 @@ class ButtonSwitchCard extends HTMLElement {
       ...config,
     };
 
+    if (this._config.layout_variant !== "large") {
+      this._config.layout_variant = "compact";
+    }
+    this._config.compact = this._config.layout_variant === "compact";
+
     this.render();
   }
 
@@ -89,8 +105,8 @@ class ButtonSwitchCard extends HTMLElement {
   }
 
   getGridOptions() {
-    const compact = Boolean(this._config?.compact);
-    return compact
+    const isCompactLayout = this._config?.layout_variant !== "large";
+    return isCompactLayout
       ? { rows: 4, columns: 6, min_rows: 4, min_columns: 6 }
       : { rows: 8, columns: 12, min_rows: 6, min_columns: 12 };
   }
@@ -239,7 +255,8 @@ class ButtonSwitchCard extends HTMLElement {
       this._config.name || stateObj?.attributes?.friendly_name || this._config.entity;
     const title = this._config.title || friendlyName;
     const powerText = this._getPowerText();
-    const compactClass = this._config.compact ? "compact" : "";
+    const isCompactLayout = this._config.layout_variant !== "large";
+    const compactClass = isCompactLayout ? "compact" : "";
     const sliderOrientation =
       this._config.slider_orientation === "horizontal" ? "horizontal" : "vertical";
     const reverseDirection = Boolean(this._config.reverse_direction);
@@ -286,7 +303,7 @@ class ButtonSwitchCard extends HTMLElement {
           isUnavailable ? `${friendlyName} unavailable` : `Toggle ${friendlyName}`
         }">
           ${
-            this._config.compact
+            isCompactLayout
               ? `
           <div class="compact-title">${title}</div>
           <div class="compact-switch-wrap">
@@ -355,10 +372,15 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .card {
-          min-height: 235px;
+          container-type: inline-size;
+          --large-track-width: clamp(64px, 30cqw, 88px);
+          --large-track-height: clamp(120px, 66cqw, 176px);
+          --large-knob-size: clamp(48px, 24cqw, 64px);
+          --large-track-padding: clamp(12px, 7cqw, 20px);
+          min-height: clamp(190px, 92cqw, 310px);
           background: ${cardBackground};
           color: #fff;
-          padding: 13px;
+          padding: clamp(10px, 5cqw, 16px);
           display: flex;
           flex-direction: column;
           justify-content: space-between;
@@ -370,6 +392,9 @@ class ButtonSwitchCard extends HTMLElement {
 
         .card.compact {
           container-type: inline-size;
+          --compact-track-line-inset: clamp(6px, 4.5cqw, 12px);
+          --compact-track-line-size: clamp(4px, 2.8cqw, 7px);
+          --compact-knob-offset: clamp(6px, 4.2cqw, 14px);
           min-height: 0;
           aspect-ratio: 1 / 1;
           padding: 6%;
@@ -424,9 +449,9 @@ class ButtonSwitchCard extends HTMLElement {
           position: absolute;
           left: 50%;
           transform: translateX(-50%);
-          top: 10px;
-          bottom: 10px;
-          width: 6px;
+          top: var(--compact-track-line-inset);
+          bottom: var(--compact-track-line-inset);
+          width: var(--compact-track-line-size);
           border-radius: 12px;
           background: ${this._config.track_inner_color};
         }
@@ -439,12 +464,12 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .compact-track.horizontal .compact-track-line {
-          left: 10px;
-          right: 10px;
+          left: var(--compact-track-line-inset);
+          right: var(--compact-track-line-inset);
           top: 50%;
           bottom: auto;
           width: auto;
-          height: 6px;
+          height: var(--compact-track-line-size);
           transform: translateY(-50%);
         }
 
@@ -465,11 +490,11 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .compact-knob.start {
-          top: 9%;
+          top: var(--compact-knob-offset);
         }
 
         .compact-knob.end {
-          bottom: 9%;
+          bottom: var(--compact-knob-offset);
         }
 
         .compact-track.horizontal .compact-knob {
@@ -478,12 +503,12 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .compact-track.horizontal .compact-knob.start {
-          left: 9%;
+          left: var(--compact-knob-offset);
         }
 
         .compact-track.horizontal .compact-knob.end {
           left: auto;
-          right: 9%;
+          right: var(--compact-knob-offset);
         }
 
         .compact-knob.unavailable {
@@ -506,7 +531,7 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .compact-state {
-          border-radius: 20px;
+          border-radius: clamp(12px, 9cqw, 22px);
           padding: 7% 16%;
           font-weight: 700;
           letter-spacing: 1px;
@@ -540,22 +565,29 @@ class ButtonSwitchCard extends HTMLElement {
           white-space: nowrap;
         }
 
+        .compact-state,
+        .compact-mode {
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
         .top-row {
           display: flex;
           justify-content: space-between;
-          gap: 6px;
+          gap: clamp(4px, 2cqw, 10px);
           font-family: "Arial", sans-serif;
         }
 
         .label-title {
-          font-size: 12px;
+          font-size: clamp(10px, 4.8cqw, 12px);
           letter-spacing: 2px;
           opacity: 0.85;
         }
 
         .label-value {
-          margin-top: 4px;
-          font-size: 10px;
+          margin-top: clamp(2px, 1.5cqw, 6px);
+          font-size: clamp(9px, 3.8cqw, 11px);
           font-weight: 700;
         }
 
@@ -564,19 +596,20 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .entity {
-          font-size: 12px;
+          font-size: clamp(10px, 4.2cqw, 12px);
           opacity: 0.9;
           word-break: break-word;
-          max-width: 80px;
+          max-width: 38cqw;
         }
 
         .main-name {
-          font-size: 24px;
+          font-size: clamp(18px, 9.2cqw, 28px);
           line-height: 1.05;
           font-weight: 700;
-          margin: 14px 0 10px;
+          margin: clamp(8px, 4cqw, 16px) 0 clamp(8px, 4cqw, 14px);
           text-align: center;
           font-family: "Arial", sans-serif;
+          overflow-wrap: anywhere;
         }
 
         .switch-wrap {
@@ -587,9 +620,9 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .track {
-          width: 80px;
-          height: 170px;
-          border-radius: 40px;
+          width: var(--large-track-width);
+          height: var(--large-track-height);
+          border-radius: clamp(28px, 14cqw, 42px);
           background: ${this._config.track_color};
           position: relative;
           border: 2px solid rgba(255, 255, 255, 0.28);
@@ -600,25 +633,25 @@ class ButtonSwitchCard extends HTMLElement {
           position: absolute;
           left: 50%;
           transform: translateX(-50%);
-          top: 16px;
-          bottom: 16px;
-          width: 9px;
+          top: var(--large-track-padding);
+          bottom: var(--large-track-padding);
+          width: clamp(7px, 3.8cqw, 10px);
           border-radius: 12px;
           background: ${this._config.track_inner_color};
         }
 
         .track.horizontal {
-          width: 170px;
-          height: 80px;
+          width: var(--large-track-height);
+          height: var(--large-track-width);
         }
 
         .track.horizontal .track-line {
-          left: 16px;
-          right: 16px;
+          left: var(--large-track-padding);
+          right: var(--large-track-padding);
           top: 50%;
           bottom: auto;
           width: auto;
-          height: 9px;
+          height: clamp(7px, 3.8cqw, 10px);
           transform: translateY(-50%);
         }
 
@@ -626,9 +659,9 @@ class ButtonSwitchCard extends HTMLElement {
           position: absolute;
           left: 50%;
           transform: translateX(-50%);
-          width: 62px;
-          height: 62px;
-          border-radius: 18px;
+          width: var(--large-knob-size);
+          height: var(--large-knob-size);
+          border-radius: clamp(14px, 7cqw, 20px);
           background: ${this._config.knob_color};
           display: flex;
           align-items: center;
@@ -639,11 +672,11 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .knob.start {
-          top: 19px;
+          top: calc(var(--large-track-padding) + clamp(1px, 0.8cqw, 4px));
         }
 
         .knob.end {
-          bottom: 19px;
+          bottom: calc(var(--large-track-padding) + clamp(1px, 0.8cqw, 4px));
         }
 
         .track.horizontal .knob {
@@ -652,12 +685,12 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .track.horizontal .knob.start {
-          left: 19px;
+          left: calc(var(--large-track-padding) + clamp(1px, 0.8cqw, 4px));
         }
 
         .track.horizontal .knob.end {
           left: auto;
-          right: 19px;
+          right: calc(var(--large-track-padding) + clamp(1px, 0.8cqw, 4px));
         }
 
         .knob.unavailable {
@@ -668,15 +701,15 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .knob ha-icon {
-          --mdc-icon-size: 22px;
+          --mdc-icon-size: clamp(18px, 9.5cqw, 24px);
         }
 
         .bottom-row {
           display: grid;
           grid-template-columns: auto 1fr auto;
-          gap: 6px;
+          gap: clamp(4px, 2.2cqw, 8px);
           align-items: center;
-          margin-top: 10px;
+          margin-top: clamp(8px, 4cqw, 12px);
         }
 
         .chip,
@@ -686,7 +719,7 @@ class ButtonSwitchCard extends HTMLElement {
           font-weight: 700;
           letter-spacing: 1px;
           text-transform: uppercase;
-          font-size: 11px;
+          font-size: clamp(9px, 4.2cqw, 11px);
           border: 1px solid rgba(255, 255, 255, 0.45);
           background: ${this._config.chip_inactive_background};
         }
@@ -701,58 +734,16 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .state-text {
-          font-size: 18px;
+          font-size: clamp(13px, 7.2cqw, 20px);
           font-weight: 700;
           text-align: right;
           font-family: "Arial", sans-serif;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         @media (max-width: 768px) {
-          .card {
-            min-height: 210px;
-            padding: 10px;
-          }
-
-          .main-name {
-            font-size: 18px;
-          }
-
-          .track {
-            width: 70px;
-            height: 140px;
-          }
-
-          .track.horizontal {
-            width: 140px;
-            height: 70px;
-          }
-
-          .knob {
-            width: 53px;
-            height: 53px;
-            border-radius: 15px;
-          }
-
-          .knob.start {
-            top: 14px;
-          }
-
-          .knob.end {
-            bottom: 14px;
-          }
-
-          .track.horizontal .knob.start {
-            left: 14px;
-          }
-
-          .track.horizontal .knob.end {
-            right: 14px;
-          }
-
-          .state-text {
-            font-size: 14px;
-          }
-
           .card.compact {
             padding: 6%;
             gap: 3%;
@@ -859,12 +850,23 @@ class ButtonSwitchCardEditor extends HTMLElement {
   }
 
   setConfig(config) {
+    const hasLegacyCompactFlag = typeof config.compact === "boolean";
+    const requestedLayoutVariant =
+      config.layout_variant === "large"
+        ? "large"
+        : config.layout_variant === "compact"
+        ? "compact"
+        : hasLegacyCompactFlag && config.compact === false
+        ? "large"
+        : "compact";
+
     this._config = {
       entity: "",
       name: "",
       title: "",
       icon: "mdi:radiator",
-      compact: false,
+      layout_variant: requestedLayoutVariant,
+      compact: requestedLayoutVariant === "compact",
       power_entity: "",
       power_value: "",
       power_unit: "W",
@@ -893,6 +895,11 @@ class ButtonSwitchCardEditor extends HTMLElement {
       double_tap_action: { action: "toggle" },
       ...config,
     };
+
+    if (this._config.layout_variant !== "large") {
+      this._config.layout_variant = "compact";
+    }
+    this._config.compact = this._config.layout_variant === "compact";
 
     if (!Array.isArray(this._config.power_thresholds)) {
       this._config.power_thresholds = [];
@@ -929,6 +936,13 @@ class ButtonSwitchCardEditor extends HTMLElement {
       nextConfig[field] = value;
     } else {
       delete nextConfig[field];
+    }
+
+    if (field === "layout_variant") {
+      if (nextConfig.layout_variant !== "large") {
+        nextConfig.layout_variant = "compact";
+      }
+      nextConfig.compact = nextConfig.layout_variant === "compact";
     }
 
     if (previousValue === nextConfig[field]) return;
@@ -1097,9 +1111,16 @@ class ButtonSwitchCardEditor extends HTMLElement {
         <ha-textfield label="Knob color" data-field="knob_color" value="${this._config.knob_color || ""}"></ha-textfield>
         <ha-textfield label="Chip active background" data-field="chip_active_background" value="${this._config.chip_active_background || ""}"></ha-textfield>
         <ha-textfield label="Chip inactive background" data-field="chip_inactive_background" value="${this._config.chip_inactive_background || ""}"></ha-textfield>
-        <label class="toggle-field">
-          <span>Compact square layout</span>
-          <input type="checkbox" data-field="compact" ${this._config.compact ? "checked" : ""} />
+        <label class="orientation-field">
+          <span>Layout variant</span>
+          <select data-field="layout_variant">
+            <option value="compact" ${this._config.layout_variant !== "large" ? "selected" : ""}>
+              Compact (default)
+            </option>
+            <option value="large" ${this._config.layout_variant === "large" ? "selected" : ""}>
+              Large (explicit)
+            </option>
+          </select>
         </label>
         <label class="toggle-field">
           <span>Show power below compact switch</span>
@@ -1278,11 +1299,11 @@ class ButtonSwitchCardEditor extends HTMLElement {
       input.addEventListener("change", (event) => this._valueChanged(event));
     });
 
-    this.querySelectorAll('select[data-field="slider_orientation"], select[data-field="name_content"]').forEach(
-      (input) => {
-        input.addEventListener("change", (event) => this._valueChanged(event));
-      }
-    );
+    this.querySelectorAll(
+      'select[data-field="slider_orientation"], select[data-field="name_content"], select[data-field="layout_variant"]'
+    ).forEach((input) => {
+      input.addEventListener("change", (event) => this._valueChanged(event));
+    });
 
     const addThresholdButton = this.querySelector("button.add-threshold");
     if (addThresholdButton) {
@@ -1298,19 +1319,8 @@ class ButtonSwitchCardEditor extends HTMLElement {
   }
 }
 
-class HeatSwitchCard extends ButtonSwitchCard {}
-class HaButtonControllerCard extends ButtonSwitchCard {}
-
 if (!customElements.get("button-switch-card")) {
   customElements.define("button-switch-card", ButtonSwitchCard);
-}
-
-if (!customElements.get("heat-switch-card")) {
-  customElements.define("heat-switch-card", HeatSwitchCard);
-}
-
-if (!customElements.get("ha-button-controller")) {
-  customElements.define("ha-button-controller", HaButtonControllerCard);
 }
 
 if (!customElements.get("button-switch-card-editor")) {
@@ -1324,16 +1334,6 @@ const buttonSwitchPickerCards = [
     type: "custom:button-switch-card",
     name: "Button Switch Card",
     description: "Switch on/off controller card with a visual editor and preview support.",
-  },
-  {
-    type: "custom:heat-switch-card",
-    name: "Heat Switch Card (alias)",
-    description: "Compatibility alias for Button Switch Card.",
-  },
-  {
-    type: "custom:ha-button-controller",
-    name: "HA Button Controller (alias)",
-    description: "Alias card type for the HA Button Controller with full UI editor support.",
   },
 ];
 
