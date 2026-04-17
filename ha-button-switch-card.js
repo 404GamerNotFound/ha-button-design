@@ -38,6 +38,7 @@ class ButtonSwitchCard extends HTMLElement {
     if (!config || !config.entity) {
       throw new Error("Button Switch Card: You need to define an entity.");
     }
+
     if (!config.entity.startsWith("switch.")) {
       throw new Error("Button Switch Card: The entity must be from the switch domain (switch.*).");
     }
@@ -90,8 +91,8 @@ class ButtonSwitchCard extends HTMLElement {
     if (this._config.layout_variant !== "large") {
       this._config.layout_variant = "compact";
     }
-    this._config.compact = this._config.layout_variant === "compact";
 
+    this._config.compact = this._config.layout_variant === "compact";
     this.render();
   }
 
@@ -101,35 +102,49 @@ class ButtonSwitchCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 2;
+    const isCompactLayout = this._config?.layout_variant !== "large";
+    return isCompactLayout ? 3 : 5;
   }
 
   getGridOptions() {
     const isCompactLayout = this._config?.layout_variant !== "large";
+
     return isCompactLayout
-      ? { rows: 4, columns: 6, min_rows: 4, min_columns: 6 }
-      : { rows: 8, columns: 12, min_rows: 6, min_columns: 12 };
+      ? { rows: 3, columns: 6, min_rows: 3, min_columns: 6 }
+      : { rows: 5, columns: 12, min_rows: 5, min_columns: 12 };
+  }
+
+  _escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  _escapeAttribute(value) {
+    return this._escapeHtml(value);
   }
 
   _isOn(stateObj) {
-    if (!stateObj) return false;
-    return stateObj.state === "on";
+    return Boolean(stateObj && stateObj.state === "on");
   }
 
   _isUnavailable(stateObj) {
-    return stateObj?.state === "unavailable";
+    return !stateObj || stateObj.state === "unavailable" || stateObj.state === "unknown";
   }
 
   _toggleSwitch() {
     if (!this._hass || !this._config) return;
-
-    const entityId = this._config.entity;
-    this._hass.callService("switch", "toggle", { entity_id: entityId });
+    this._hass.callService("switch", "toggle", { entity_id: this._config.entity });
   }
 
   _fireAction(actionName) {
     if (!this._hass || !this._config) return;
+
     const stateObj = this._hass.states[this._config.entity];
+
     if (this._isUnavailable(stateObj)) {
       this.dispatchEvent(
         new CustomEvent("hass-more-info", {
@@ -148,8 +163,16 @@ class ButtonSwitchCard extends HTMLElement {
       return;
     }
 
+    if (action.action === "none") {
+      return;
+    }
+
     if (action.action === "call-service" && action.service) {
+      if (!action.service.includes(".")) return;
+
       const [domain, service] = action.service.split(".");
+      if (!domain || !service) return;
+
       this._hass.callService(domain, service, action.service_data || {});
       return;
     }
@@ -167,6 +190,7 @@ class ButtonSwitchCard extends HTMLElement {
 
   _formatPowerValue(rawValue) {
     const parsed = Number.parseFloat(rawValue);
+
     if (!Number.isFinite(parsed)) {
       return `${rawValue}`.trim();
     }
@@ -183,12 +207,15 @@ class ButtonSwitchCard extends HTMLElement {
 
     if (this._config.power_entity && this._hass) {
       const powerState = this._hass.states[this._config.power_entity];
+
       if (powerState) {
         const state = powerState.state;
         if (state === "unknown" || state === "unavailable") {
           return "";
         }
-        const unit = powerState.attributes?.unit_of_measurement || this._config.power_unit || "W";
+
+        const unit =
+          powerState.attributes?.unit_of_measurement || this._config.power_unit || "W";
         const formattedValue = this._formatPowerValue(state);
         return `${formattedValue} ${unit}`.trim();
       }
@@ -208,6 +235,7 @@ class ButtonSwitchCard extends HTMLElement {
 
     if (this._config.power_entity && this._hass) {
       const powerState = this._hass.states[this._config.power_entity];
+
       if (powerState) {
         const parsed = Number.parseFloat(powerState.state);
         return Number.isFinite(parsed) ? parsed : null;
@@ -227,6 +255,7 @@ class ButtonSwitchCard extends HTMLElement {
     if (!rawThresholds) return [];
 
     let list = rawThresholds;
+
     if (typeof rawThresholds === "string") {
       try {
         list = JSON.parse(rawThresholds);
@@ -242,8 +271,13 @@ class ButtonSwitchCard extends HTMLElement {
         const threshold =
           entry?.above ?? entry?.threshold ?? entry?.value ?? entry?.watts ?? entry?.watt;
         const parsedThreshold = Number.parseFloat(threshold);
+
         if (!Number.isFinite(parsedThreshold) || !entry?.color) return null;
-        return { threshold: parsedThreshold, color: entry.color };
+
+        return {
+          threshold: parsedThreshold,
+          color: entry.color,
+        };
       })
       .filter(Boolean)
       .sort((a, b) => a.threshold - b.threshold);
@@ -269,17 +303,24 @@ class ButtonSwitchCard extends HTMLElement {
     const stateObj = this._hass ? this._hass.states[this._config.entity] : null;
     const isUnavailable = this._isUnavailable(stateObj);
     const isOn = !isUnavailable && this._isOn(stateObj);
+
     const friendlyName =
       this._config.name || stateObj?.attributes?.friendly_name || this._config.entity;
     const title = this._config.title || friendlyName;
     const powerText = this._getPowerText();
+
     const isCompactLayout = this._config.layout_variant !== "large";
     const compactClass = isCompactLayout ? "compact" : "";
     const sliderOrientation =
       this._config.slider_orientation === "horizontal" ? "horizontal" : "vertical";
     const reverseDirection = Boolean(this._config.reverse_direction);
-    const displayName = this._config.name_content === "power" && powerText ? powerText : friendlyName;
-    const showSecondaryPower = !isUnavailable && Boolean(powerText) && this._config.show_power_secondary;
+
+    const displayName =
+      this._config.name_content === "power" && powerText ? powerText : friendlyName;
+
+    const showSecondaryPower =
+      !isUnavailable && Boolean(powerText) && this._config.show_power_secondary;
+
     const compactPrimaryText = isUnavailable
       ? this._config.unavailable_label
       : showSecondaryPower
@@ -287,7 +328,9 @@ class ButtonSwitchCard extends HTMLElement {
       : isOn
       ? "ON"
       : "OFF";
+
     const activeButtonColor = this._getActiveButtonColor();
+
     const cardBackground = activeButtonColor
       ? `linear-gradient(180deg, ${activeButtonColor}, ${activeButtonColor})`
       : `linear-gradient(180deg, ${this._config.background_start}, ${this._config.background_end})`;
@@ -301,7 +344,7 @@ class ButtonSwitchCard extends HTMLElement {
       : isOn !== reverseDirection
       ? "start"
       : "end";
-    const compactKnobPositionClass = regularKnobPositionClass;
+
     const currentStateText = isUnavailable ? "N/A" : isOn ? "ON" : "OFF";
     const statusPillText = isUnavailable
       ? this._config.unavailable_label
@@ -313,27 +356,40 @@ class ButtonSwitchCard extends HTMLElement {
       : isOn
       ? this._config.state_text_on
       : this._config.state_text_off;
+
     const chipClass = isUnavailable ? "unavailable" : isOn ? "active" : "";
+
+    const safeFriendlyName = this._escapeHtml(friendlyName);
+    const safeTitle = this._escapeHtml(title);
+    const safeDisplayName = this._escapeHtml(displayName);
+    const safeEntity = this._escapeHtml(this._config.entity);
+    const safeCompactPrimaryText = this._escapeHtml(compactPrimaryText);
+    const safeCurrentStateText = this._escapeHtml(currentStateText);
+    const safeStatusPillText = this._escapeHtml(statusPillText);
+    const safeStateText = this._escapeHtml(stateText);
+    const safeAriaLabel = this._escapeAttribute(
+      isUnavailable ? `${friendlyName} unavailable` : `Toggle ${friendlyName}`
+    );
+    const safeIcon = this._escapeAttribute(this._config.icon || "");
+    const iconMarkup = safeIcon ? `<ha-icon icon="${safeIcon}"></ha-icon>` : "";
 
     this.shadowRoot.innerHTML = `
       <ha-card>
-        <div class="card ${compactClass}" role="button" tabindex="0" aria-label="${
-          isUnavailable ? `${friendlyName} unavailable` : `Toggle ${friendlyName}`
-        }">
+        <div class="card ${compactClass}" role="button" tabindex="0" aria-label="${safeAriaLabel}">
           ${
             isCompactLayout
               ? `
-          <div class="compact-title">${title}</div>
+          <div class="compact-title">${safeTitle}</div>
           <div class="compact-switch-wrap">
             <div class="compact-track ${sliderOrientation}">
               <div class="compact-track-line"></div>
-              <div class="compact-knob ${compactKnobPositionClass}">
-                ${this._config.icon ? `<ha-icon icon="${this._config.icon}"></ha-icon>` : ""}
+              <div class="compact-knob ${regularKnobPositionClass}">
+                ${iconMarkup}
               </div>
             </div>
           </div>
           <div class="compact-footer">
-            <div class="compact-state ${isOn ? "active" : ""} ${showSecondaryPower ? "power" : ""}">${compactPrimaryText}</div>
+            <div class="compact-state ${isOn ? "active" : ""} ${showSecondaryPower ? "power" : ""}">${safeCompactPrimaryText}</div>
             ${
               showSecondaryPower && this._config.show_on_off_label !== false
                 ? `<div class="compact-mode">${isOn ? "ON" : "OFF"}</div>`
@@ -345,33 +401,33 @@ class ButtonSwitchCard extends HTMLElement {
           <div class="top-row">
             <div class="label-block">
               <div class="label-title">CURRENT</div>
-              <div class="label-value">${currentStateText}</div>
+              <div class="label-value">${safeCurrentStateText}</div>
             </div>
             <div class="label-block right">
               <div class="label-title">ENTITY</div>
-              <div class="label-value entity">${this._config.entity}</div>
+              <div class="label-value entity">${safeEntity}</div>
             </div>
           </div>
 
-          <div class="main-name">${displayName}</div>
+          <div class="main-name">${safeDisplayName}</div>
 
           <div class="switch-wrap">
             <div class="track ${sliderOrientation}">
               <div class="track-line"></div>
               <div class="knob ${regularKnobPositionClass}">
-                ${this._config.icon ? `<ha-icon icon="${this._config.icon}"></ha-icon>` : ""}
+                ${iconMarkup}
               </div>
             </div>
           </div>
 
           <div class="bottom-row">
-            <div class="chip ${chipClass}">${currentStateText}</div>
+            <div class="chip ${chipClass}">${safeCurrentStateText}</div>
             ${
               this._config.show_on_off_label !== false
-                ? `<div class="status-pill">${statusPillText}</div>`
+                ? `<div class="status-pill">${safeStatusPillText}</div>`
                 : ""
             }
-            <div class="state-text">${stateText}</div>
+            <div class="state-text">${safeStateText}</div>
           </div>
           `
           }
@@ -381,9 +437,12 @@ class ButtonSwitchCard extends HTMLElement {
       <style>
         :host {
           display: block;
+          height: 100%;
         }
 
         ha-card {
+          display: block;
+          height: 100%;
           border-radius: 18px;
           overflow: hidden;
           box-shadow: none;
@@ -395,10 +454,12 @@ class ButtonSwitchCard extends HTMLElement {
           --large-track-height: clamp(120px, 66cqw, 176px);
           --large-knob-size: clamp(48px, 24cqw, 64px);
           --large-track-padding: clamp(12px, 7cqw, 20px);
-          min-height: clamp(190px, 92cqw, 310px);
+
+          min-height: clamp(210px, 30vw, 300px);
+          height: 100%;
           background: ${cardBackground};
           color: #fff;
-          padding: clamp(10px, 5cqw, 16px);
+          padding: 14px;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
@@ -406,19 +467,19 @@ class ButtonSwitchCard extends HTMLElement {
           cursor: pointer;
           user-select: none;
           outline: none;
+          gap: 10px;
         }
 
         .card.compact {
-          container-type: inline-size;
-          --compact-track-line-inset: clamp(12px, 7cqw, 24px);
-          --compact-track-line-size: clamp(5px, 3.2cqw, 10px);
-          --compact-knob-offset: clamp(8px, 4.4cqw, 16px);
-          min-height: 0;
-          aspect-ratio: 1 / 1;
-          padding: 7%;
-          border-radius: 14%;
-          gap: 2%;
-          justify-content: space-between;
+          --compact-track-line-inset: clamp(10px, 6cqw, 18px);
+          --compact-track-line-size: clamp(5px, 3cqw, 8px);
+          --compact-knob-offset: clamp(8px, 4cqw, 14px);
+
+          min-height: clamp(140px, 18vw, 185px);
+          height: 100%;
+          padding: 12px;
+          border-radius: 18px;
+          gap: 10px;
         }
 
         .card:focus-visible {
@@ -428,7 +489,7 @@ class ButtonSwitchCard extends HTMLElement {
 
         .compact-title {
           text-align: center;
-          font-size: clamp(20px, 12cqw, 30px);
+          font-size: clamp(18px, 11cqw, 28px);
           font-weight: 700;
           letter-spacing: 0.3px;
           font-family: "Arial", sans-serif;
@@ -436,9 +497,8 @@ class ButtonSwitchCard extends HTMLElement {
           overflow: hidden;
           white-space: nowrap;
           text-overflow: ellipsis;
-          min-height: 0;
           flex: 0 0 auto;
-          margin-bottom: 1%;
+          margin: 0;
         }
 
         .compact-switch-wrap {
@@ -446,13 +506,13 @@ class ButtonSwitchCard extends HTMLElement {
           display: flex;
           align-items: center;
           justify-content: center;
+          min-height: 70px;
         }
 
         .compact-track {
           width: 100%;
-          height: 52%;
+          height: min(62px, 100%);
           max-width: 100%;
-          min-height: 40%;
           border-radius: 999px;
           background: ${this._config.track_color};
           position: relative;
@@ -474,14 +534,14 @@ class ButtonSwitchCard extends HTMLElement {
 
         .compact-track.horizontal {
           width: 100%;
-          height: 52%;
+          height: min(62px, 100%);
         }
 
         .compact-track:not(.horizontal) {
-          width: 56%;
+          width: min(74px, 58%);
           height: 100%;
-          max-width: 56%;
-          min-width: 42%;
+          min-height: 90px;
+          max-width: 74px;
         }
 
         .compact-track:not(.horizontal) .compact-track-line {
@@ -574,15 +634,15 @@ class ButtonSwitchCard extends HTMLElement {
 
         .compact-footer {
           display: grid;
-          gap: 2%;
+          gap: 6px;
           justify-items: center;
-          margin-top: 2%;
           flex: 0 0 auto;
+          margin-top: 0;
         }
 
         .compact-state {
           border-radius: clamp(20px, 10cqw, 34px);
-          padding: 8% 22%;
+          padding: 8px 16px;
           font-weight: 700;
           letter-spacing: 0.3px;
           text-transform: uppercase;
@@ -591,6 +651,8 @@ class ButtonSwitchCard extends HTMLElement {
           background: rgba(255, 255, 255, 0.18);
           max-width: 100%;
           white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .compact-state.active {
@@ -603,14 +665,14 @@ class ButtonSwitchCard extends HTMLElement {
           letter-spacing: 0.2px;
           width: fit-content;
           max-width: 92%;
-          padding: 8% 14%;
+          padding: 8px 14px;
           font-size: clamp(12px, 5.8cqw, 21px);
           overflow: hidden;
           text-overflow: ellipsis;
         }
 
         .compact-mode {
-          font-size: clamp(14px, 10cqw, 28px);
+          font-size: clamp(13px, 9cqw, 22px);
           font-weight: 700;
           font-family: "Arial", sans-serif;
           line-height: 1.1;
@@ -618,13 +680,6 @@ class ButtonSwitchCard extends HTMLElement {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-        }
-
-        .compact-state,
-        .compact-mode {
-          max-width: 100%;
-          overflow: hidden;
-          text-overflow: ellipsis;
         }
 
         .top-row {
@@ -661,7 +716,7 @@ class ButtonSwitchCard extends HTMLElement {
           font-size: clamp(18px, 9.2cqw, 28px);
           line-height: 1.05;
           font-weight: 700;
-          margin: clamp(8px, 4cqw, 16px) 0 clamp(8px, 4cqw, 14px);
+          margin: 6px 0;
           text-align: center;
           font-family: "Arial", sans-serif;
           overflow-wrap: anywhere;
@@ -672,6 +727,7 @@ class ButtonSwitchCard extends HTMLElement {
           justify-content: center;
           align-items: center;
           flex: 1;
+          min-height: 120px;
         }
 
         .track {
@@ -764,7 +820,7 @@ class ButtonSwitchCard extends HTMLElement {
           grid-template-columns: auto 1fr auto;
           gap: clamp(4px, 2.2cqw, 8px);
           align-items: center;
-          margin-top: clamp(8px, 4cqw, 12px);
+          margin-top: 6px;
         }
 
         .chip,
@@ -777,6 +833,9 @@ class ButtonSwitchCard extends HTMLElement {
           font-size: clamp(9px, 4.2cqw, 11px);
           border: 1px solid rgba(255, 255, 255, 0.45);
           background: ${this._config.chip_inactive_background};
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .chip.active {
@@ -800,26 +859,17 @@ class ButtonSwitchCard extends HTMLElement {
 
         @media (max-width: 768px) {
           .card.compact {
-            padding: 7%;
-            gap: 2%;
-          }
-
-          .compact-track {
-            width: 100%;
-            height: 52%;
+            min-height: 132px;
+            padding: 10px;
+            gap: 8px;
           }
 
           .compact-track.horizontal {
-            width: 100%;
-            height: 52%;
-          }
-
-          .compact-knob {
-            width: 40%;
+            height: 56px;
           }
 
           .compact-title {
-            font-size: clamp(17px, 11cqw, 24px);
+            font-size: clamp(16px, 11cqw, 24px);
           }
 
           .compact-mode {
@@ -830,7 +880,10 @@ class ButtonSwitchCard extends HTMLElement {
     `;
 
     const card = this.shadowRoot.querySelector(".card");
+    if (!card) return;
+
     card.addEventListener("click", () => this._fireAction("tap_action"));
+
     card.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
@@ -856,6 +909,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
     this._config = null;
     this._hass = null;
     this._focusState = null;
+    this._scrollState = null;
     this._lastInteractedField = null;
   }
 
@@ -868,6 +922,53 @@ class ButtonSwitchCardEditor extends HTMLElement {
     } catch (error) {
       return false;
     }
+  }
+
+  _escapeAttribute(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  _findScrollContainer() {
+    let current = this.parentElement;
+
+    while (current) {
+      const style = window.getComputedStyle(current);
+      const canScroll =
+        /(auto|scroll)/.test(style.overflowY || "") && current.scrollHeight > current.clientHeight;
+
+      if (canScroll) {
+        return current;
+      }
+
+      current = current.parentElement;
+    }
+
+    return null;
+  }
+
+  _captureScrollState() {
+    const container = this._findScrollContainer();
+    this._scrollState = container
+      ? { type: "element", element: container, top: container.scrollTop }
+      : { type: "window", top: window.scrollY };
+  }
+
+  _restoreScrollState() {
+    if (!this._scrollState) return;
+
+    requestAnimationFrame(() => {
+      if (this._scrollState.type === "element" && this._scrollState.element) {
+        this._scrollState.element.scrollTop = this._scrollState.top;
+        return;
+      }
+
+      window.scrollTo({ top: this._scrollState.top, behavior: "auto" });
+    });
   }
 
   _captureFocusState(sourceElement = null) {
@@ -893,6 +994,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
     }
 
     const valueElement = activeElement.inputElement || activeElement;
+
     this._focusState = {
       selector:
         `${tagName}` +
@@ -930,13 +1032,17 @@ class ButtonSwitchCardEditor extends HTMLElement {
         this._focusState.selectionStart !== null &&
         this._focusState.selectionEnd !== null
       ) {
-        valueElement.setSelectionRange(this._focusState.selectionStart, this._focusState.selectionEnd);
+        valueElement.setSelectionRange(
+          this._focusState.selectionStart,
+          this._focusState.selectionEnd
+        );
       }
     });
   }
 
   _emitConfigChanged(nextConfig, rerender = false) {
     this._captureFocusState(this._lastInteractedField);
+    this._captureScrollState();
     this._config = nextConfig;
 
     this.dispatchEvent(
@@ -1002,6 +1108,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
     if (nextConfig.layout_variant !== "large") {
       nextConfig.layout_variant = "compact";
     }
+
     nextConfig.compact = nextConfig.layout_variant === "compact";
 
     if (!Array.isArray(nextConfig.power_thresholds)) {
@@ -1013,6 +1120,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
       return;
     }
 
+    this._captureScrollState();
     this._config = nextConfig;
     this._render();
   }
@@ -1022,6 +1130,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
     this._hass = hass;
 
     if (isFirstRender) {
+      this._captureScrollState();
       this._render();
       return;
     }
@@ -1029,6 +1138,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
     const entityPicker = this.querySelector('ha-entity-picker[data-field="entity"]');
     if (entityPicker) {
       entityPicker.hass = hass;
+      entityPicker.includeDomains = ["switch"];
     }
   }
 
@@ -1063,7 +1173,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
       nextConfig.compact = nextConfig.layout_variant === "compact";
     }
 
-    if (this._configsEqual(previousValue, nextConfig[field])) return;
+    if (previousValue === nextConfig[field]) return;
 
     const shouldRerender = field === "layout_variant";
     this._emitConfigChanged(nextConfig, shouldRerender);
@@ -1109,19 +1219,31 @@ class ButtonSwitchCardEditor extends HTMLElement {
     const current = { ...(thresholds[index] || { above: "", color: "#ff0000" }) };
     current[key] = value;
     thresholds[index] = current;
-    this._emitConfigChanged({ ...this._config, power_thresholds: thresholds }, false);
+
+    this._emitConfigChanged(
+      { ...this._config, power_thresholds: thresholds },
+      false
+    );
   }
 
   _addThreshold() {
     const thresholds = [...(this._config.power_thresholds || [])];
     thresholds.push({ above: "", color: "#ff0000" });
-    this._emitConfigChanged({ ...this._config, power_thresholds: thresholds }, true);
+
+    this._emitConfigChanged(
+      { ...this._config, power_thresholds: thresholds },
+      true
+    );
   }
 
   _removeThreshold(index) {
     const thresholds = [...(this._config.power_thresholds || [])];
     thresholds.splice(index, 1);
-    this._emitConfigChanged({ ...this._config, power_thresholds: thresholds }, true);
+
+    this._emitConfigChanged(
+      { ...this._config, power_thresholds: thresholds },
+      true
+    );
   }
 
   _renderActionFields(actionField, label) {
@@ -1137,7 +1259,9 @@ class ButtonSwitchCardEditor extends HTMLElement {
         <label class="orientation-field">
           <span>Action type</span>
           <select data-action-field="${actionField}" data-action-key="action">
-            <option value="toggle" ${action.action !== "more-info" && action.action !== "call-service" ? "selected" : ""}>Toggle</option>
+            <option value="toggle" ${
+              action.action !== "more-info" && action.action !== "call-service" ? "selected" : ""
+            }>Toggle</option>
             <option value="more-info" ${action.action === "more-info" ? "selected" : ""}>More info</option>
             <option value="call-service" ${action.action === "call-service" ? "selected" : ""}>Call service</option>
           </select>
@@ -1147,14 +1271,14 @@ class ButtonSwitchCardEditor extends HTMLElement {
           helper="Example: light.turn_on"
           data-action-field="${actionField}"
           data-action-key="service"
-          value="${action.service || ""}"
+          value="${this._escapeAttribute(action.service || "")}"
         ></ha-textfield>
         <ha-textfield
           label="Service data JSON"
           helper='Example: {"entity_id":"switch.tv"}'
           data-action-field="${actionField}"
           data-action-key="service_data"
-          value='${serviceData.replace(/'/g, "&apos;")}'
+          value="${this._escapeAttribute(serviceData)}"
         ></ha-textfield>
       </fieldset>
     `;
@@ -1168,7 +1292,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
         <ha-entity-picker
           label="Switch entity"
           data-field="entity"
-          value="${this._config.entity || ""}"
+          value="${this._escapeAttribute(this._config.entity || "")}"
         ></ha-entity-picker>
       `
       : `
@@ -1176,66 +1300,138 @@ class ButtonSwitchCardEditor extends HTMLElement {
           label="Switch entity"
           helper="Example: switch.tv"
           data-field="entity"
-          value="${this._config.entity || ""}"
+          value="${this._escapeAttribute(this._config.entity || "")}"
         ></ha-textfield>
       `;
 
     this.innerHTML = `
       <div class="card-config">
         ${entityField}
+
         <ha-textfield
           label="Name"
           data-field="name"
-          value="${this._config.name || ""}"
+          value="${this._escapeAttribute(this._config.name || "")}"
         ></ha-textfield>
+
         <ha-textfield
           label="Title (compact)"
           data-field="title"
-          value="${this._config.title || ""}"
+          value="${this._escapeAttribute(this._config.title || "")}"
         ></ha-textfield>
+
         <ha-textfield
           label="Icon"
           helper="Example: mdi:radiator"
           data-field="icon"
-          value="${this._config.icon || ""}"
+          value="${this._escapeAttribute(this._config.icon || "")}"
         ></ha-textfield>
+
         <ha-textfield
           label="Power entity (optional)"
           helper="Example: sensor.tv_power"
           data-field="power_entity"
-          value="${this._config.power_entity || ""}"
+          value="${this._escapeAttribute(this._config.power_entity || "")}"
         ></ha-textfield>
+
         <ha-textfield
           label="Power value fallback"
           helper="Example: 120"
           data-field="power_value"
-          value="${this._config.power_value || ""}"
+          value="${this._escapeAttribute(this._config.power_value || "")}"
         ></ha-textfield>
+
         <ha-textfield
           label="Power unit"
           helper="Default: W"
           data-field="power_unit"
-          value="${this._config.power_unit || ""}"
+          value="${this._escapeAttribute(this._config.power_unit || "")}"
         ></ha-textfield>
+
         <ha-textfield
           label="Button color override (optional)"
           helper="Example: #ff9800"
           data-field="button_color"
-          value="${this._config.button_color || ""}"
+          value="${this._escapeAttribute(this._config.button_color || "")}"
         ></ha-textfield>
-        <ha-textfield label="On label" data-field="on_label" value="${this._config.on_label || ""}"></ha-textfield>
-        <ha-textfield label="Off label" data-field="off_label" value="${this._config.off_label || ""}"></ha-textfield>
-        <ha-textfield label="Unavailable label" data-field="unavailable_label" value="${this._config.unavailable_label || ""}"></ha-textfield>
-        <ha-textfield label="State text when on" data-field="state_text_on" value="${this._config.state_text_on || ""}"></ha-textfield>
-        <ha-textfield label="State text when off" data-field="state_text_off" value="${this._config.state_text_off || ""}"></ha-textfield>
-        <ha-textfield label="State text when unavailable" data-field="state_text_unavailable" value="${this._config.state_text_unavailable || ""}"></ha-textfield>
-        <ha-textfield label="Background start" data-field="background_start" value="${this._config.background_start || ""}"></ha-textfield>
-        <ha-textfield label="Background end" data-field="background_end" value="${this._config.background_end || ""}"></ha-textfield>
-        <ha-textfield label="Track color" data-field="track_color" value="${this._config.track_color || ""}"></ha-textfield>
-        <ha-textfield label="Track inner color" data-field="track_inner_color" value="${this._config.track_inner_color || ""}"></ha-textfield>
-        <ha-textfield label="Knob color" data-field="knob_color" value="${this._config.knob_color || ""}"></ha-textfield>
-        <ha-textfield label="Chip active background" data-field="chip_active_background" value="${this._config.chip_active_background || ""}"></ha-textfield>
-        <ha-textfield label="Chip inactive background" data-field="chip_inactive_background" value="${this._config.chip_inactive_background || ""}"></ha-textfield>
+
+        <ha-textfield
+          label="On label"
+          data-field="on_label"
+          value="${this._escapeAttribute(this._config.on_label || "")}"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Off label"
+          data-field="off_label"
+          value="${this._escapeAttribute(this._config.off_label || "")}"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Unavailable label"
+          data-field="unavailable_label"
+          value="${this._escapeAttribute(this._config.unavailable_label || "")}"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="State text when on"
+          data-field="state_text_on"
+          value="${this._escapeAttribute(this._config.state_text_on || "")}"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="State text when off"
+          data-field="state_text_off"
+          value="${this._escapeAttribute(this._config.state_text_off || "")}"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="State text when unavailable"
+          data-field="state_text_unavailable"
+          value="${this._escapeAttribute(this._config.state_text_unavailable || "")}"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Background start"
+          data-field="background_start"
+          value="${this._escapeAttribute(this._config.background_start || "")}"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Background end"
+          data-field="background_end"
+          value="${this._escapeAttribute(this._config.background_end || "")}"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Track color"
+          data-field="track_color"
+          value="${this._escapeAttribute(this._config.track_color || "")}"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Track inner color"
+          data-field="track_inner_color"
+          value="${this._escapeAttribute(this._config.track_inner_color || "")}"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Knob color"
+          data-field="knob_color"
+          value="${this._escapeAttribute(this._config.knob_color || "")}"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Chip active background"
+          data-field="chip_active_background"
+          value="${this._escapeAttribute(this._config.chip_active_background || "")}"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Chip inactive background"
+          data-field="chip_inactive_background"
+          value="${this._escapeAttribute(this._config.chip_inactive_background || "")}"
+        ></ha-textfield>
 
         <label class="orientation-field">
           <span>Layout variant</span>
@@ -1316,13 +1512,13 @@ class ButtonSwitchCardEditor extends HTMLElement {
                     type="number"
                     data-threshold-index="${index}"
                     data-threshold-key="above"
-                    value="${entry.above ?? ""}"
+                    value="${this._escapeAttribute(entry.above ?? "")}"
                   ></ha-textfield>
                   <ha-textfield
                     label="Color"
                     data-threshold-index="${index}"
                     data-threshold-key="color"
-                    value="${entry.color || ""}"
+                    value="${this._escapeAttribute(entry.color || "")}"
                   ></ha-textfield>
                   <button type="button" data-remove-threshold="${index}">Remove</button>
                 </div>
@@ -1337,6 +1533,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
         .card-config {
           display: grid;
           gap: 12px;
+          padding-bottom: 4px;
         }
 
         .orientation-field {
@@ -1414,9 +1611,11 @@ class ButtonSwitchCardEditor extends HTMLElement {
     this.querySelectorAll("ha-textfield[data-threshold-index]").forEach((input) => {
       const index = Number(input.dataset.thresholdIndex);
       const key = input.dataset.thresholdKey;
-      input.addEventListener("change", (event) =>
-        this._thresholdChanged(index, key, event.target.value)
-      );
+
+      input.addEventListener("change", (event) => {
+        const value = event.detail?.value !== undefined ? event.detail.value : event.target.value;
+        this._thresholdChanged(index, key, value);
+      });
     });
 
     const entityPicker = this.querySelector('ha-entity-picker[data-field="entity"]');
@@ -1424,7 +1623,6 @@ class ButtonSwitchCardEditor extends HTMLElement {
       entityPicker.hass = this._hass;
       entityPicker.includeDomains = ["switch"];
       entityPicker.addEventListener("value-changed", (event) => this._valueChanged(event));
-      entityPicker.addEventListener("change", (event) => this._valueChanged(event));
     }
 
     this.querySelectorAll('input[type="checkbox"][data-field]').forEach((input) => {
@@ -1447,6 +1645,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
       button.addEventListener("click", () => this._removeThreshold(index));
     });
 
+    this._restoreScrollState();
     this._restoreFocusState();
   }
 }
