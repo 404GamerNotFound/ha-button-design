@@ -851,18 +851,39 @@ class ButtonSwitchCard extends HTMLElement {
 }
 
 class ButtonSwitchCardEditor extends HTMLElement {
+  _configsEqual(leftConfig, rightConfig) {
+    if (leftConfig === rightConfig) return true;
+    if (!leftConfig || !rightConfig) return false;
+
+    try {
+      return JSON.stringify(leftConfig) === JSON.stringify(rightConfig);
+    } catch (error) {
+      return false;
+    }
+  }
+
   _captureFocusState(sourceElement = null) {
-    const activeElement = sourceElement || this.querySelector("ha-textfield:focus, select:focus, input:focus, ha-entity-picker:focus");
+    const activeElement =
+      sourceElement || this.querySelector("ha-textfield:focus, select:focus, input:focus, ha-entity-picker:focus");
     if (!activeElement) {
+      this._focusState = null;
+      return;
+    }
+
+    const tagName = activeElement.tagName?.toLowerCase?.() || "";
+    const inputType = activeElement.type || activeElement.inputElement?.type || "";
+    const shouldRestoreFocus =
+      tagName === "ha-textfield" ||
+      (tagName === "input" && inputType !== "checkbox" && inputType !== "radio");
+
+    if (!shouldRestoreFocus) {
       this._focusState = null;
       return;
     }
 
     const valueElement = activeElement.inputElement || activeElement;
     this._focusState = {
-      selector: activeElement.tagName
-        ? `${activeElement.tagName.toLowerCase()}${activeElement.dataset?.field ? `[data-field="${activeElement.dataset.field}"]` : ""}${activeElement.dataset?.actionField ? `[data-action-field="${activeElement.dataset.actionField}"][data-action-key="${activeElement.dataset.actionKey}"]` : ""}${activeElement.dataset?.thresholdIndex ? `[data-threshold-index="${activeElement.dataset.thresholdIndex}"][data-threshold-key="${activeElement.dataset.thresholdKey}"]` : ""}`
-        : null,
+      selector: `${tagName}${activeElement.dataset?.field ? `[data-field="${activeElement.dataset.field}"]` : ""}${activeElement.dataset?.actionField ? `[data-action-field="${activeElement.dataset.actionField}"][data-action-key="${activeElement.dataset.actionKey}"]` : ""}${activeElement.dataset?.thresholdIndex ? `[data-threshold-index="${activeElement.dataset.thresholdIndex}"][data-threshold-key="${activeElement.dataset.thresholdKey}"]` : ""}`,
       selectionStart: typeof valueElement.selectionStart === "number" ? valueElement.selectionStart : null,
       selectionEnd: typeof valueElement.selectionEnd === "number" ? valueElement.selectionEnd : null,
     };
@@ -915,7 +936,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
         ? "large"
         : "compact";
 
-    this._config = {
+    const nextConfig = {
       entity: "",
       name: "",
       title: "",
@@ -951,15 +972,21 @@ class ButtonSwitchCardEditor extends HTMLElement {
       ...config,
     };
 
-    if (this._config.layout_variant !== "large") {
-      this._config.layout_variant = "compact";
+    if (nextConfig.layout_variant !== "large") {
+      nextConfig.layout_variant = "compact";
     }
-    this._config.compact = this._config.layout_variant === "compact";
+    nextConfig.compact = nextConfig.layout_variant === "compact";
 
-    if (!Array.isArray(this._config.power_thresholds)) {
-      this._config.power_thresholds = [];
+    if (!Array.isArray(nextConfig.power_thresholds)) {
+      nextConfig.power_thresholds = [];
     }
 
+    if (this._configsEqual(this._config, nextConfig)) {
+      this._config = nextConfig;
+      return;
+    }
+
+    this._config = nextConfig;
     this._render();
   }
 
