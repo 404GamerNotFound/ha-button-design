@@ -11,20 +11,7 @@ Custom Lovelace switch card for Home Assistant with an orange button-style desig
 ```yaml
 type: custom:button-switch-card
 ```
-
-Compatibility alias (legacy naming):
-
-```yaml
-type: custom:heat-switch-card
-```
-
-Controller alias (Dashboard picker entry):
-
-```yaml
-type: custom:ha-button-controller
-```
-
-All card types are registered for the Dashboard card picker with preview support.
+The card is registered for the Dashboard card picker with preview support.
 The visual editor now exposes all card settings (labels, colors, thresholds, and actions), so YAML is optional.
 
 If the card picker does not show **Button Switch Card** immediately, do a hard browser refresh and then reload Home Assistant resources.

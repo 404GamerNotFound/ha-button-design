@@ -1319,19 +1319,8 @@ class ButtonSwitchCardEditor extends HTMLElement {
   }
 }
 
-class HeatSwitchCard extends ButtonSwitchCard {}
-class HaButtonControllerCard extends ButtonSwitchCard {}
-
 if (!customElements.get("button-switch-card")) {
   customElements.define("button-switch-card", ButtonSwitchCard);
-}
-
-if (!customElements.get("heat-switch-card")) {
-  customElements.define("heat-switch-card", HeatSwitchCard);
-}
-
-if (!customElements.get("ha-button-controller")) {
-  customElements.define("ha-button-controller", HaButtonControllerCard);
 }
 
 if (!customElements.get("button-switch-card-editor")) {
@@ -1345,16 +1334,6 @@ const buttonSwitchPickerCards = [
     type: "custom:button-switch-card",
     name: "Button Switch Card",
     description: "Switch on/off controller card with a visual editor and preview support.",
-  },
-  {
-    type: "custom:heat-switch-card",
-    name: "Heat Switch Card (alias)",
-    description: "Compatibility alias for Button Switch Card.",
-  },
-  {
-    type: "custom:ha-button-controller",
-    name: "HA Button Controller (alias)",
-    description: "Alias card type for the HA Button Controller with full UI editor support.",
   },
 ];
 
