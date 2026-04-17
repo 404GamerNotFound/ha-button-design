@@ -601,7 +601,12 @@ class ButtonSwitchCard extends HTMLElement {
         .compact-state.power {
           text-transform: none;
           letter-spacing: 0.2px;
-          padding: 8% 20%;
+          width: fit-content;
+          max-width: 92%;
+          padding: 8% 14%;
+          font-size: clamp(12px, 5.8cqw, 21px);
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .compact-mode {
