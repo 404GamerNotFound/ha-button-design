@@ -79,7 +79,7 @@ class ButtonSwitchCard extends HTMLElement {
       button_color: "",
       name_content: "entity",
       show_power_secondary: true,
-      show_on_off_label: true,
+      show_on_off_label: false,
       power_thresholds: [],
       tap_action: { action: "toggle" },
       hold_action: { action: "more-info" },
@@ -165,6 +165,19 @@ class ButtonSwitchCard extends HTMLElement {
     }
   }
 
+  _formatPowerValue(rawValue) {
+    const parsed = Number.parseFloat(rawValue);
+    if (!Number.isFinite(parsed)) {
+      return `${rawValue}`.trim();
+    }
+
+    if (Math.abs(parsed) >= 100) {
+      return `${Math.round(parsed)}`;
+    }
+
+    return parsed.toFixed(1).replace(/\.0$/, "");
+  }
+
   _getPowerText() {
     if (!this._config) return "";
 
@@ -172,14 +185,19 @@ class ButtonSwitchCard extends HTMLElement {
       const powerState = this._hass.states[this._config.power_entity];
       if (powerState) {
         const state = powerState.state;
+        if (state === "unknown" || state === "unavailable") {
+          return "";
+        }
         const unit = powerState.attributes?.unit_of_measurement || this._config.power_unit || "W";
-        return `${state} ${unit}`.trim();
+        const formattedValue = this._formatPowerValue(state);
+        return `${formattedValue} ${unit}`.trim();
       }
     }
 
     if (this._config.power_value !== "" && this._config.power_value !== undefined) {
       const unit = this._config.power_unit || "W";
-      return `${this._config.power_value} ${unit}`.trim();
+      const formattedValue = this._formatPowerValue(this._config.power_value);
+      return `${formattedValue} ${unit}`.trim();
     }
 
     return "";
@@ -397,9 +415,9 @@ class ButtonSwitchCard extends HTMLElement {
           --compact-knob-offset: clamp(8px, 4.4cqw, 16px);
           min-height: 0;
           aspect-ratio: 1 / 1;
-          padding: 8%;
+          padding: 7%;
           border-radius: 14%;
-          gap: 4%;
+          gap: 2%;
           justify-content: space-between;
         }
 
@@ -414,19 +432,17 @@ class ButtonSwitchCard extends HTMLElement {
           font-weight: 700;
           letter-spacing: 0.3px;
           font-family: "Arial", sans-serif;
-          line-height: 1.05;
+          line-height: 1.1;
           overflow: hidden;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          text-wrap: balance;
-          min-height: 2.25em;
-          max-height: 2.25em;
-          flex: 0 0 24%;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          min-height: 0;
+          flex: 0 0 auto;
+          margin-bottom: 1%;
         }
 
         .compact-switch-wrap {
-          flex: 0 0 46%;
+          flex: 1 1 auto;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -558,10 +574,10 @@ class ButtonSwitchCard extends HTMLElement {
 
         .compact-footer {
           display: grid;
-          gap: 4%;
+          gap: 2%;
           justify-items: center;
-          margin-top: 1%;
-          flex: 0 0 24%;
+          margin-top: 2%;
+          flex: 0 0 auto;
         }
 
         .compact-state {
@@ -779,8 +795,8 @@ class ButtonSwitchCard extends HTMLElement {
 
         @media (max-width: 768px) {
           .card.compact {
-            padding: 8%;
-            gap: 3%;
+            padding: 7%;
+            gap: 2%;
           }
 
           .compact-track {
@@ -909,7 +925,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
       button_color: "",
       name_content: "entity",
       show_power_secondary: true,
-      show_on_off_label: true,
+      show_on_off_label: false,
       power_thresholds: [],
       on_label: "SWITCH ON",
       off_label: "SWITCH OFF",
