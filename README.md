@@ -105,17 +105,25 @@ square: false
 cards:
   - type: custom:button-switch-card
     entity: switch.tv
-    compact: true
     title: TV
     icon: mdi:television
     power_entity: sensor.tv_power
   - type: custom:button-switch-card
     entity: switch.console
-    compact: true
     title: Console
     icon: mdi:gamepad-variant
     power_value: "85"
     power_unit: W
+```
+
+### Large layout example (must be explicitly enabled)
+
+```yaml
+type: custom:button-switch-card
+entity: switch.tv
+name: Living Room
+layout_variant: large
+icon: mdi:television
 ```
 
 ## Configuration options
@@ -126,7 +134,8 @@ cards:
 | `name` | string | entity friendly name | Title in the center of the card. |
 | `title` | string | `name`/friendly name | Header title used by compact mode. |
 | `icon` | string | `mdi:radiator` | Icon inside the switch knob. |
-| `compact` | boolean | `false` | Enables the compact square layout for 2-up rows. |
+| `layout_variant` | string | `compact` | Layout mode. Use `large` to explicitly enable the classic large layout. |
+| `compact` | boolean | legacy | Backward compatibility flag (`true` = compact, `false` = large). Prefer `layout_variant`. |
 | `slider_orientation` | string | `vertical` | Switch direction (`vertical` or `horizontal`). |
 | `reverse_direction` | boolean | `false` | Reverses knob travel direction (for example horizontal: left=on, right=off). |
 | `power_entity` | string | empty | Sensor entity used to show the live power value at the bottom. |
