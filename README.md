@@ -123,7 +123,7 @@ icon: mdi:television
 | `icon` | string | `mdi:radiator` | Icon inside the switch knob. |
 | `layout_variant` | string | `compact` | Layout mode. Use `large` to explicitly enable the classic large layout. |
 | `compact` | boolean | legacy | Backward compatibility flag (`true` = compact, `false` = large). Prefer `layout_variant`. |
-| `slider_orientation` | string | `vertical` | Switch direction (`vertical` or `horizontal`). |
+| `slider_orientation` | string | `horizontal` | Switch direction (`vertical` or `horizontal`). |
 | `reverse_direction` | boolean | `false` | Reverses knob travel direction (for example horizontal: left=on, right=off). |
 | `power_entity` | string | empty | Sensor entity used to show the live power value at the bottom. |
 | `power_value` | string/number | empty | Static fallback power value shown when no sensor is provided. |
