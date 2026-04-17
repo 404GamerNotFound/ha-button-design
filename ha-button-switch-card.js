@@ -851,6 +851,14 @@ class ButtonSwitchCard extends HTMLElement {
 }
 
 class ButtonSwitchCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this._config = null;
+    this._hass = null;
+    this._focusState = null;
+    this._lastInteractedField = null;
+  }
+
   _configsEqual(leftConfig, rightConfig) {
     if (leftConfig === rightConfig) return true;
     if (!leftConfig || !rightConfig) return false;
@@ -864,7 +872,9 @@ class ButtonSwitchCardEditor extends HTMLElement {
 
   _captureFocusState(sourceElement = null) {
     const activeElement =
-      sourceElement || this.querySelector("ha-textfield:focus, select:focus, input:focus, ha-entity-picker:focus");
+      sourceElement ||
+      this.querySelector("ha-textfield:focus, select:focus, input:focus, ha-entity-picker:focus");
+
     if (!activeElement) {
       this._focusState = null;
       return;
@@ -874,6 +884,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
     const inputType = activeElement.type || activeElement.inputElement?.type || "";
     const shouldRestoreFocus =
       tagName === "ha-textfield" ||
+      tagName === "select" ||
       (tagName === "input" && inputType !== "checkbox" && inputType !== "radio");
 
     if (!shouldRestoreFocus) {
@@ -883,9 +894,23 @@ class ButtonSwitchCardEditor extends HTMLElement {
 
     const valueElement = activeElement.inputElement || activeElement;
     this._focusState = {
-      selector: `${tagName}${activeElement.dataset?.field ? `[data-field="${activeElement.dataset.field}"]` : ""}${activeElement.dataset?.actionField ? `[data-action-field="${activeElement.dataset.actionField}"][data-action-key="${activeElement.dataset.actionKey}"]` : ""}${activeElement.dataset?.thresholdIndex ? `[data-threshold-index="${activeElement.dataset.thresholdIndex}"][data-threshold-key="${activeElement.dataset.thresholdKey}"]` : ""}`,
-      selectionStart: typeof valueElement.selectionStart === "number" ? valueElement.selectionStart : null,
-      selectionEnd: typeof valueElement.selectionEnd === "number" ? valueElement.selectionEnd : null,
+      selector:
+        `${tagName}` +
+        `${activeElement.dataset?.field ? `[data-field="${activeElement.dataset.field}"]` : ""}` +
+        `${
+          activeElement.dataset?.actionField
+            ? `[data-action-field="${activeElement.dataset.actionField}"][data-action-key="${activeElement.dataset.actionKey}"]`
+            : ""
+        }` +
+        `${
+          activeElement.dataset?.thresholdIndex
+            ? `[data-threshold-index="${activeElement.dataset.thresholdIndex}"][data-threshold-key="${activeElement.dataset.thresholdKey}"]`
+            : ""
+        }`,
+      selectionStart:
+        typeof valueElement.selectionStart === "number" ? valueElement.selectionStart : null,
+      selectionEnd:
+        typeof valueElement.selectionEnd === "number" ? valueElement.selectionEnd : null,
     };
   }
 
@@ -895,6 +920,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
     requestAnimationFrame(() => {
       const target = this.querySelector(this._focusState.selector);
       if (!target) return;
+
       target.focus();
 
       const valueElement = target.inputElement || target;
@@ -912,6 +938,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
   _emitConfigChanged(nextConfig, rerender = false) {
     this._captureFocusState(this._lastInteractedField);
     this._config = nextConfig;
+
     this.dispatchEvent(
       new CustomEvent("config-changed", {
         bubbles: true,
@@ -991,30 +1018,39 @@ class ButtonSwitchCardEditor extends HTMLElement {
   }
 
   set hass(hass) {
+    const isFirstRender = !this._hass;
     this._hass = hass;
-    this._render();
+
+    if (isFirstRender) {
+      this._render();
+      return;
+    }
+
+    const entityPicker = this.querySelector('ha-entity-picker[data-field="entity"]');
+    if (entityPicker) {
+      entityPicker.hass = hass;
+    }
   }
 
   _valueChanged(event) {
     if (!this._config) return;
+
     const target = event.target;
     this._lastInteractedField = target;
+
     const field = target?.dataset?.field;
     if (!field) return;
 
     const detailValue = event.detail?.value;
     const rawValue = detailValue !== undefined ? detailValue : target.value;
-    const value =
-      target.type === "checkbox"
-        ? target.checked
-        : typeof rawValue === "string"
-        ? rawValue.trim()
-        : rawValue;
+    const value = target.type === "checkbox" ? target.checked : rawValue;
+
     const nextConfig = { ...this._config };
     const previousValue = nextConfig[field];
+
     if (typeof value === "boolean") {
       nextConfig[field] = value;
-    } else if (value) {
+    } else if (value !== undefined && value !== null && value !== "") {
       nextConfig[field] = value;
     } else {
       delete nextConfig[field];
@@ -1027,21 +1063,26 @@ class ButtonSwitchCardEditor extends HTMLElement {
       nextConfig.compact = nextConfig.layout_variant === "compact";
     }
 
-    if (previousValue === nextConfig[field]) return;
-    this._emitConfigChanged(nextConfig);
+    if (this._configsEqual(previousValue, nextConfig[field])) return;
+
+    const shouldRerender = field === "layout_variant";
+    this._emitConfigChanged(nextConfig, shouldRerender);
   }
 
   _actionChanged(event) {
     if (!this._config) return;
+
     const target = event.target;
     this._lastInteractedField = target;
+
     const actionField = target?.dataset?.actionField;
     const key = target?.dataset?.actionKey;
     if (!actionField || !key) return;
 
     const nextConfig = { ...this._config };
     const currentAction = { ...(nextConfig[actionField] || {}) };
-    const value = target.value?.trim?.() ?? target.value;
+    const rawValue = event.detail?.value !== undefined ? event.detail.value : target.value;
+    const value = typeof rawValue === "string" ? rawValue : rawValue ?? "";
 
     if (!value) {
       delete currentAction[key];
@@ -1058,6 +1099,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
     if (!currentAction.action) {
       currentAction.action = "toggle";
     }
+
     nextConfig[actionField] = currentAction;
     this._emitConfigChanged(nextConfig);
   }
@@ -1067,7 +1109,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
     const current = { ...(thresholds[index] || { above: "", color: "#ff0000" }) };
     current[key] = value;
     thresholds[index] = current;
-    this._emitConfigChanged({ ...this._config, power_thresholds: thresholds }, true);
+    this._emitConfigChanged({ ...this._config, power_thresholds: thresholds }, false);
   }
 
   _addThreshold() {
@@ -1088,6 +1130,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
       typeof action.service_data === "object"
         ? JSON.stringify(action.service_data)
         : action.service_data || "";
+
     return `
       <fieldset class="action-group">
         <legend>${label}</legend>
@@ -1193,6 +1236,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
         <ha-textfield label="Knob color" data-field="knob_color" value="${this._config.knob_color || ""}"></ha-textfield>
         <ha-textfield label="Chip active background" data-field="chip_active_background" value="${this._config.chip_active_background || ""}"></ha-textfield>
         <ha-textfield label="Chip inactive background" data-field="chip_inactive_background" value="${this._config.chip_inactive_background || ""}"></ha-textfield>
+
         <label class="orientation-field">
           <span>Layout variant</span>
           <select data-field="layout_variant">
@@ -1204,6 +1248,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
             </option>
           </select>
         </label>
+
         <label class="toggle-field">
           <span>Show power below compact switch</span>
           <input
@@ -1212,6 +1257,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
             ${this._config.show_power_secondary ? "checked" : ""}
           />
         </label>
+
         <label class="toggle-field">
           <span>Show ON/OFF label</span>
           <input
@@ -1220,40 +1266,31 @@ class ButtonSwitchCardEditor extends HTMLElement {
             ${this._config.show_on_off_label !== false ? "checked" : ""}
           />
         </label>
+
         <label class="orientation-field">
           <span>Name content</span>
           <select data-field="name_content">
-            <option
-              value="entity"
-              ${this._config.name_content !== "power" ? "selected" : ""}
-            >
+            <option value="entity" ${this._config.name_content !== "power" ? "selected" : ""}>
               Entity name
             </option>
-            <option
-              value="power"
-              ${this._config.name_content === "power" ? "selected" : ""}
-            >
+            <option value="power" ${this._config.name_content === "power" ? "selected" : ""}>
               Power text
             </option>
           </select>
         </label>
+
         <label class="orientation-field">
           <span>Slider orientation</span>
           <select data-field="slider_orientation">
-            <option
-              value="vertical"
-              ${this._config.slider_orientation !== "horizontal" ? "selected" : ""}
-            >
+            <option value="vertical" ${this._config.slider_orientation !== "horizontal" ? "selected" : ""}>
               Vertical
             </option>
-            <option
-              value="horizontal"
-              ${this._config.slider_orientation === "horizontal" ? "selected" : ""}
-            >
+            <option value="horizontal" ${this._config.slider_orientation === "horizontal" ? "selected" : ""}>
               Horizontal
             </option>
           </select>
         </label>
+
         <label class="toggle-field">
           <span>Reverse switch direction</span>
           <input
@@ -1262,9 +1299,11 @@ class ButtonSwitchCardEditor extends HTMLElement {
             ${this._config.reverse_direction ? "checked" : ""}
           />
         </label>
+
         ${this._renderActionFields("tap_action", "Tap action")}
         ${this._renderActionFields("hold_action", "Hold action")}
         ${this._renderActionFields("double_tap_action", "Double tap action")}
+
         <fieldset class="action-group">
           <legend>Power thresholds</legend>
           <p class="helper">Define dynamic button colors by power values.</p>
@@ -1272,8 +1311,19 @@ class ButtonSwitchCardEditor extends HTMLElement {
             .map(
               (entry, index) => `
                 <div class="threshold-row" data-index="${index}">
-                  <ha-textfield label="Above" type="number" data-threshold-index="${index}" data-threshold-key="above" value="${entry.above ?? ""}"></ha-textfield>
-                  <ha-textfield label="Color" data-threshold-index="${index}" data-threshold-key="color" value="${entry.color || ""}"></ha-textfield>
+                  <ha-textfield
+                    label="Above"
+                    type="number"
+                    data-threshold-index="${index}"
+                    data-threshold-key="above"
+                    value="${entry.above ?? ""}"
+                  ></ha-textfield>
+                  <ha-textfield
+                    label="Color"
+                    data-threshold-index="${index}"
+                    data-threshold-key="color"
+                    value="${entry.color || ""}"
+                  ></ha-textfield>
                   <button type="button" data-remove-threshold="${index}">Remove</button>
                 </div>
               `
@@ -1282,6 +1332,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
           <button type="button" class="add-threshold">Add threshold</button>
         </fieldset>
       </div>
+
       <style>
         .card-config {
           display: grid;
@@ -1350,12 +1401,10 @@ class ButtonSwitchCardEditor extends HTMLElement {
 
     this.querySelectorAll("ha-textfield[data-field]").forEach((input) => {
       input.addEventListener("change", (event) => this._valueChanged(event));
-      input.addEventListener("input", (event) => this._valueChanged(event));
     });
 
     this.querySelectorAll("ha-textfield[data-action-field]").forEach((input) => {
       input.addEventListener("change", (event) => this._actionChanged(event));
-      input.addEventListener("input", (event) => this._actionChanged(event));
     });
 
     this.querySelectorAll("select[data-action-field]").forEach((input) => {
@@ -1365,8 +1414,9 @@ class ButtonSwitchCardEditor extends HTMLElement {
     this.querySelectorAll("ha-textfield[data-threshold-index]").forEach((input) => {
       const index = Number(input.dataset.thresholdIndex);
       const key = input.dataset.thresholdKey;
-      input.addEventListener("change", (event) => this._thresholdChanged(index, key, event.target.value));
-      input.addEventListener("input", (event) => this._thresholdChanged(index, key, event.target.value));
+      input.addEventListener("change", (event) =>
+        this._thresholdChanged(index, key, event.target.value)
+      );
     });
 
     const entityPicker = this.querySelector('ha-entity-picker[data-field="entity"]');
