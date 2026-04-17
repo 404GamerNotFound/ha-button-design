@@ -369,12 +369,13 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .card.compact {
+          container-type: inline-size;
           min-height: 0;
           aspect-ratio: 1 / 1;
-          padding: 14px;
-          border-radius: 16px;
-          gap: 6px;
-          justify-content: flex-start;
+          padding: 6%;
+          border-radius: 10%;
+          gap: 3%;
+          justify-content: space-between;
         }
 
         .card:focus-visible {
@@ -384,31 +385,35 @@ class ButtonSwitchCard extends HTMLElement {
 
         .compact-title {
           text-align: center;
-          font-size: clamp(16px, 6.2vw, 22px);
+          font-size: clamp(14px, 11cqw, 24px);
           font-weight: 700;
           letter-spacing: 0.3px;
           font-family: "Arial", sans-serif;
-          line-height: 1.1;
+          line-height: 1.05;
           overflow: hidden;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           text-wrap: balance;
-          min-height: 1.2em;
+          min-height: 2.1em;
+          max-height: 2.1em;
+          flex: 0 0 20%;
         }
 
         .compact-switch-wrap {
-          flex: 1;
+          flex: 0 0 40%;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-top: 2px;
         }
 
         .compact-track {
-          width: 40px;
-          height: 74px;
-          border-radius: 10px;
+          width: 50%;
+          height: 100%;
+          max-width: 46%;
+          min-width: 30%;
+          max-height: 100%;
+          border-radius: 20%;
           background: ${this._config.track_color};
           position: relative;
           border: 2px solid rgba(255, 255, 255, 0.28);
@@ -427,8 +432,10 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .compact-track.horizontal {
-          width: 74px;
-          height: 40px;
+          width: 100%;
+          height: 50%;
+          max-height: 46%;
+          min-height: 30%;
         }
 
         .compact-track.horizontal .compact-track-line {
@@ -445,9 +452,9 @@ class ButtonSwitchCard extends HTMLElement {
           position: absolute;
           left: 50%;
           transform: translateX(-50%);
-          width: 30px;
-          height: 30px;
-          border-radius: 10px;
+          width: 46%;
+          aspect-ratio: 1 / 1;
+          border-radius: 26%;
           background: ${this._config.knob_color};
           display: flex;
           align-items: center;
@@ -458,11 +465,11 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .compact-knob.start {
-          top: 7px;
+          top: 9%;
         }
 
         .compact-knob.end {
-          bottom: 7px;
+          bottom: 9%;
         }
 
         .compact-track.horizontal .compact-knob {
@@ -471,12 +478,12 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .compact-track.horizontal .compact-knob.start {
-          left: 7px;
+          left: 9%;
         }
 
         .compact-track.horizontal .compact-knob.end {
           left: auto;
-          right: 7px;
+          right: 9%;
         }
 
         .compact-knob.unavailable {
@@ -487,25 +494,28 @@ class ButtonSwitchCard extends HTMLElement {
         }
 
         .compact-knob ha-icon {
-          --mdc-icon-size: 15px;
+          --mdc-icon-size: clamp(12px, 6.5cqw, 19px);
         }
 
         .compact-footer {
           display: grid;
-          gap: 6px;
+          gap: 6%;
           justify-items: center;
-          margin-top: auto;
+          margin-top: 0;
+          flex: 0 0 30%;
         }
 
         .compact-state {
-          border-radius: 12px;
-          padding: 6px 14px;
+          border-radius: 20px;
+          padding: 7% 16%;
           font-weight: 700;
           letter-spacing: 1px;
           text-transform: uppercase;
-          font-size: 14px;
+          font-size: clamp(11px, 7cqw, 17px);
           border: 1px solid rgba(255, 255, 255, 0.45);
           background: ${this._config.chip_inactive_background};
+          max-width: 100%;
+          white-space: nowrap;
         }
 
         .compact-state.active {
@@ -516,11 +526,11 @@ class ButtonSwitchCard extends HTMLElement {
         .compact-state.power {
           text-transform: none;
           letter-spacing: 0.2px;
-          padding: 6px 12px;
+          padding: 7% 14%;
         }
 
         .compact-mode {
-          font-size: clamp(16px, 6vw, 21px);
+          font-size: clamp(14px, 10cqw, 28px);
           font-weight: 700;
           font-family: "Arial", sans-serif;
           line-height: 1.1;
@@ -744,31 +754,30 @@ class ButtonSwitchCard extends HTMLElement {
           }
 
           .card.compact {
-            padding: 12px;
-            gap: 6px;
+            padding: 6%;
+            gap: 3%;
           }
 
           .compact-track {
-            width: 58px;
-            height: 112px;
+            width: 50%;
+            height: 100%;
           }
 
           .compact-track.horizontal {
-            width: 112px;
-            height: 58px;
+            width: 100%;
+            height: 50%;
           }
 
           .compact-knob {
-            width: 44px;
-            height: 44px;
+            width: 46%;
           }
 
           .compact-title {
-            font-size: clamp(13px, 5.4vw, 16px);
+            font-size: clamp(12px, 10cqw, 18px);
           }
 
           .compact-mode {
-            font-size: clamp(12px, 5vw, 15px);
+            font-size: clamp(12px, 9cqw, 21px);
           }
         }
       </style>
