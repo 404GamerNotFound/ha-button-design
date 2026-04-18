@@ -128,6 +128,7 @@ icon: mdi:television
 | `power_entity` | string | empty | Sensor entity used to show the live power value at the bottom. |
 | `power_value` | string/number | empty | Static fallback power value shown when no sensor is provided. |
 | `power_unit` | string | `W` | Unit for `power_value` fallback or missing sensor unit. |
+| `power_threshold_target` | string | `button` | Defines where `power_thresholds` colors are applied: `button` (entire card background) or `power_text` (watt display text only). |
 | `background_start` | color string | `#ffa20f` | Gradient start color. |
 | `background_end` | color string | `#ff9800` | Gradient end color. |
 | `on_label` | string | `SWITCH ON` | Middle bottom status text when on. |

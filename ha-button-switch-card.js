@@ -80,6 +80,7 @@ class ButtonSwitchCard extends HTMLElement {
       button_color: "",
       name_content: "entity",
       show_power_secondary: true,
+      power_threshold_target: "button",
       show_on_off_label: false,
       power_thresholds: [],
       tap_action: { action: "toggle" },
@@ -90,6 +91,10 @@ class ButtonSwitchCard extends HTMLElement {
 
     if (this._config.layout_variant !== "large") {
       this._config.layout_variant = "compact";
+    }
+
+    if (this._config.power_threshold_target !== "power_text") {
+      this._config.power_threshold_target = "button";
     }
 
     this._config.compact = this._config.layout_variant === "compact";
@@ -283,7 +288,7 @@ class ButtonSwitchCard extends HTMLElement {
       .sort((a, b) => a.threshold - b.threshold);
   }
 
-  _getActiveButtonColor() {
+  _getMatchedPowerThresholdColor() {
     if (!this._config) return "";
 
     const numericPower = this._getPowerNumericValue();
@@ -293,6 +298,19 @@ class ButtonSwitchCard extends HTMLElement {
       const matched = thresholds.filter((entry) => numericPower >= entry.threshold).pop();
       if (matched) return matched.color;
     }
+
+    return "";
+  }
+
+  _getActiveButtonColor() {
+    if (!this._config) return "";
+
+    if (this._config.power_threshold_target === "power_text") {
+      return this._config.button_color || "";
+    }
+
+    const matchedColor = this._getMatchedPowerThresholdColor();
+    if (matchedColor) return matchedColor;
 
     return this._config.button_color || "";
   }
@@ -320,6 +338,10 @@ class ButtonSwitchCard extends HTMLElement {
 
     const showSecondaryPower =
       !isUnavailable && Boolean(powerText) && this._config.show_power_secondary;
+    const thresholdPowerColor =
+      this._config.power_threshold_target === "power_text" && !isUnavailable
+        ? this._getMatchedPowerThresholdColor()
+        : "";
 
     const compactPrimaryText = isUnavailable
       ? this._config.unavailable_label
@@ -372,6 +394,8 @@ class ButtonSwitchCard extends HTMLElement {
     );
     const safeIcon = this._escapeAttribute(this._config.icon || "");
     const iconMarkup = safeIcon ? `<ha-icon icon="${safeIcon}"></ha-icon>` : "";
+    const mainNameClass =
+      thresholdPowerColor && this._config.name_content === "power" && powerText ? "power-color" : "";
 
     this.shadowRoot.innerHTML = `
       <ha-card>
@@ -389,7 +413,9 @@ class ButtonSwitchCard extends HTMLElement {
             </div>
           </div>
           <div class="compact-footer">
-            <div class="compact-state ${isOn ? "active" : ""} ${showSecondaryPower ? "power" : ""}">${safeCompactPrimaryText}</div>
+            <div class="compact-state ${isOn ? "active" : ""} ${showSecondaryPower ? "power" : ""} ${
+                  thresholdPowerColor && showSecondaryPower ? "threshold-power" : ""
+                }">${safeCompactPrimaryText}</div>
             ${
               showSecondaryPower && this._config.show_on_off_label !== false
                 ? `<div class="compact-mode">${isOn ? "ON" : "OFF"}</div>`
@@ -409,7 +435,7 @@ class ButtonSwitchCard extends HTMLElement {
             </div>
           </div>
 
-          <div class="main-name">${safeDisplayName}</div>
+          <div class="main-name ${mainNameClass}">${safeDisplayName}</div>
 
           <div class="switch-wrap">
             <div class="track ${sliderOrientation}">
@@ -671,6 +697,10 @@ class ButtonSwitchCard extends HTMLElement {
           text-overflow: ellipsis;
         }
 
+        .compact-state.threshold-power {
+          color: ${thresholdPowerColor || "inherit"};
+        }
+
         .compact-mode {
           font-size: clamp(13px, 9cqw, 22px);
           font-weight: 700;
@@ -720,6 +750,10 @@ class ButtonSwitchCard extends HTMLElement {
           text-align: center;
           font-family: "Arial", sans-serif;
           overflow-wrap: anywhere;
+        }
+
+        .main-name.power-color {
+          color: ${thresholdPowerColor || "inherit"};
         }
 
         .switch-wrap {
@@ -1084,6 +1118,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
       button_color: "",
       name_content: "entity",
       show_power_secondary: true,
+      power_threshold_target: "button",
       show_on_off_label: false,
       power_thresholds: [],
       on_label: "SWITCH ON",
@@ -1107,6 +1142,10 @@ class ButtonSwitchCardEditor extends HTMLElement {
 
     if (nextConfig.layout_variant !== "large") {
       nextConfig.layout_variant = "compact";
+    }
+
+    if (nextConfig.power_threshold_target !== "power_text") {
+      nextConfig.power_threshold_target = "button";
     }
 
     nextConfig.compact = nextConfig.layout_variant === "compact";
@@ -1454,6 +1493,22 @@ class ButtonSwitchCardEditor extends HTMLElement {
           />
         </label>
 
+        <label class="orientation-field">
+          <span>Power threshold color target</span>
+          <select data-field="power_threshold_target">
+            <option value="button" ${
+              this._config.power_threshold_target !== "power_text" ? "selected" : ""
+            }>
+              Entire button
+            </option>
+            <option value="power_text" ${
+              this._config.power_threshold_target === "power_text" ? "selected" : ""
+            }>
+              Watt display
+            </option>
+          </select>
+        </label>
+
         <label class="toggle-field">
           <span>Show ON/OFF label</span>
           <input
@@ -1630,7 +1685,7 @@ class ButtonSwitchCardEditor extends HTMLElement {
     });
 
     this.querySelectorAll(
-      'select[data-field="slider_orientation"], select[data-field="name_content"], select[data-field="layout_variant"]'
+      'select[data-field="slider_orientation"], select[data-field="name_content"], select[data-field="layout_variant"], select[data-field="power_threshold_target"]'
     ).forEach((input) => {
       input.addEventListener("change", (event) => this._valueChanged(event));
     });
